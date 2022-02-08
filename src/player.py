@@ -89,6 +89,13 @@ class Player(pygame.sprite.Sprite):
             image = animation[int(self.frame_index)]
             self.image = image if self.is_facing_right else pygame.transform.flip(image, True, False)
         
+    #     self.update_player_position()
+    
+    # def update_player_position(self):
+    #     if self.state in [PlayerState.RUN, PlayerState.IDLE]:
+    #         img_rect = self.image.get_rect(bottomright=self.rect.bottomright)
+    #         self.rect.bottom = img_rect.bottom
+
     def animate_particles(self):
         if self.state == PlayerState.RUN:
             # Get the correct animation
@@ -266,9 +273,9 @@ class Player(pygame.sprite.Sprite):
     def draw(self, surface: pygame.Surface):
 
         if self.is_facing_right or self.state == PlayerState.JUMP:
-            pos = self.rect.topleft
+            pos = (self.rect.left, self.rect.bottom - self.image.get_height())
         else:
-            pos = (self.rect.left + self.image.get_width() - 100, self.rect.top)
+            pos = (self.rect.left + self.image.get_width() - 100, self.rect.bottom - self.image.get_height())
         surface.blit(self.image, pos)
 
 class HatTile(Tile):
