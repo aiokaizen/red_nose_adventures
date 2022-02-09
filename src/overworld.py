@@ -2,21 +2,17 @@ import pygame
 from pygame import Vector2 as vec
 
 from settings import *
+from decoration import Sky, Clouds
+from tile import AnimatedTile
 
 
-class Node(pygame.sprite.Sprite):
+class Node(AnimatedTile):
 
     def __init__(self, pos, level, status):
-        super().__init__()
-        self.image = pygame.Surface((100, 80))
+        animation_path = f"../graphics/overworld/{level - 1}"
+        super().__init__(pos, [animation_path])
         self.status = status
         self.level = level
-        if self.status == 'available':
-            self.image.fill('indianred')
-        elif self.status == 'completed':
-            self.image.fill('goldenrod')
-        else:
-            self.image.fill('#333333')
         self.rect = self.image.get_rect(center=pos)
 
 
@@ -44,22 +40,34 @@ class Hat(pygame.sprite.Sprite):
 
 class Overworld:
 
-    def __init__(self, start_level, max_level, surface):
+    def __init__(self, start_level, max_level, surface, create_level, navigate_to=-1):
 
         # setup
         self.display_surface = surface
+        self.create_level = create_level
         self.max_level = max_level
         self.current_level = start_level
         self.hat = pygame.sprite.GroupSingle()
+        self.navigate_to = navigate_to
+
+        self.sky = Sky(12)
+        self.clouds = Clouds(10, SCREEN_WIDTH * 2, 35, overworld=True)
 
         # Sprites
         self.setup_levels()
+
+        if navigate_to > -1 and navigate_to != self.current_level:
+            if navigate_to > self.current_level:
+                self.go_next_node()
+            else:
+                self.go_previous_node()
     
     def setup_levels(self):
         self.nodes = pygame.sprite.Group()
+        current_level = self.current_level if self.navigate_to == -1 else self.navigate_to
         for level, data in levels.items():
             status = 'available' if self.max_level >= level else 'locked'
-            if level < self.current_level:
+            if level < current_level:
                 status = 'completed'
             node = Node(data['node_pos'], level, status)
             self.nodes.add(node)
@@ -80,6 +88,8 @@ class Overworld:
                 self.go_next_node()
             elif keys[pygame.K_LEFT]:
                 self.go_previous_node()
+            elif keys[pygame.K_RETURN]:
+                self.begin_level()
     
     def go_next_node(self):
         next_node = self.get_node_by_level(self.current_level + 1)
@@ -93,6 +103,10 @@ class Overworld:
             self.hat.sprite.destination = vec(previous_node.rect.center)
             self.current_level = previous_node.level
     
+    def begin_level(self):
+        if not self.hat.sprite.is_moving:
+            self.create_level(self.current_level)
+
     def draw_lines(self):
         available_points = [node.rect.center for node in self.nodes.sprites() if node.status != 'locked']
         locked_points = [node.rect.center for node in self.nodes.sprites() if node.status == 'locked']
@@ -103,9 +117,15 @@ class Overworld:
         if available_points and locked_points:
             pygame.draw.lines(self.display_surface, '#333333', False, [available_points[-1], locked_points[0]], 6)
     
-    def run(self):
-        self.get_input()
+    def draw(self):
+        self.sky.draw(self.display_surface)
+        self.clouds.draw(self.display_surface, 0)
         self.draw_lines()
         self.nodes.draw(self.display_surface)
-        self.hat.update()
         self.hat.draw(self.display_surface)
+
+    def run(self):
+        self.get_input()
+        self.hat.update()
+        self.nodes.update(0)
+        self.draw()

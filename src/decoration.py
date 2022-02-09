@@ -33,16 +33,20 @@ class Sky:
 
 class Clouds:
 
-    def __init__(self, horizon, world_width, cloud_number):
+    def __init__(self, horizon, world_width, cloud_number, overworld=False):
         self.min_x = -SCREEN_WIDTH
         self.max_x = world_width + SCREEN_WIDTH
         self.min_y = 0
         self.max_y = horizon * TILE_SIZE
         self.cloud_number = cloud_number
+        self.overworld_clouds = overworld
         self.generate_clouds()
     
     def generate_clouds(self):
-        cloud_surface_list = import_folder("../graphics/decoration/clouds/")
+        if self.overworld_clouds:
+            cloud_surface_list = import_folder("../graphics/overworld/clouds/")
+        else:
+            cloud_surface_list = import_folder("../graphics/decoration/clouds/")
         self.cloud_sprites = pygame.sprite.Group()
         for n in range(self.cloud_number):
             cloud = random.choice(cloud_surface_list)

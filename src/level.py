@@ -6,31 +6,69 @@ from particles import ParticleEffect
 from tools import ParticleEffectType, draw_outline, import_csv_layout, update_layout_exclude, update_layout_to_only_contain
 from decoration import Clouds, Sky, Water
 from enemy import Enemy, EnemyConstraint
+from tools import get_level_data
 
 
 class Level:
 
-    def __init__(self, level_data, surface):
+    def __init__(self, level, surface: pygame.Surface, create_overworld):
+        level_data = get_level_data(level)
         self.display_surface = surface
         self.level_data = level_data
         self.shift_speed = 0
         self.first_sprite = None
         self.last_sprite = None
+        self.create_overworld = create_overworld
+        self.level = level
+        self.next_level = self.level + 1
 
         # Particle effects
         self.particle_effects = pygame.sprite.Group()
 
         self.setup_level()
         self.change_view('player')
-        
-    def create_jump_animation(self, pos):
-        jump_particle_sprite = ParticleEffect(pos, ParticleEffectType.JUMP)
-        self.particle_effects.add(jump_particle_sprite)
-    
-    def create_land_animation(self, pos):
-        land_particle_sprite = ParticleEffect(pos, ParticleEffectType.LAND)
-        self.particle_effects.add(land_particle_sprite)
-    
+ 
+    def setup_level(self):
+
+        self.world_sprites = {}
+        terrain_layout = import_csv_layout(self.level_data['terrain'])
+
+        self.sky = Sky(horizon=8)
+        world_width = len(terrain_layout[0]) * TILE_SIZE
+        self.water = Water(35, world_width)
+        self.clouds = Clouds(9, world_width, 20)
+
+        bg_palms_layout = import_csv_layout(self.level_data['bg_palms'])
+        self.world_sprites['bg_palms'] = self.create_tile_group(bg_palms_layout, 'bg_palms')
+
+        collidable_terrain_layout = update_layout_exclude(terrain_layout, ['5'])
+        self.world_sprites['terrain'] = self.create_tile_group(collidable_terrain_layout, 'terrain')
+        bg_terrain_layout = update_layout_to_only_contain(terrain_layout, ['5'])
+        self.world_sprites['bg_terrain'] = self.create_tile_group(bg_terrain_layout, 'bg_terrain')
+
+        crates_layout = import_csv_layout(self.level_data['crates'])
+        self.world_sprites['crates'] = self.create_tile_group(crates_layout, 'crates')
+
+        grass_layout = import_csv_layout(self.level_data['grass'])
+        self.world_sprites['grass'] = self.create_tile_group(grass_layout, 'grass')
+
+        coins_layout = import_csv_layout(self.level_data['coins'])
+        self.world_sprites['coins'] = self.create_tile_group(coins_layout, 'coins')
+
+        fg_palms_layout = import_csv_layout(self.level_data['fg_palms'])
+        self.world_sprites['fg_palms'] = self.create_tile_group(fg_palms_layout, 'fg_palms')
+
+        enemies_constraints_layout = import_csv_layout(self.level_data['enemies_constraints'])
+        self.world_sprites['enemies_constraints'] = self.create_tile_group(
+            enemies_constraints_layout, 'enemies_constraints'
+        )
+
+        enemies_layout = import_csv_layout(self.level_data['enemies'])
+        self.enemies = self.create_tile_group(enemies_layout, 'enemies')
+
+        player_layout = import_csv_layout(self.level_data['player'])
+        self.player, self.goal = self.setup_player(player_layout)
+     
     def setup_player(self, layout):
 
         player_grp = pygame.sprite.GroupSingle()
@@ -100,48 +138,15 @@ class Level:
                     sprite_group.add(sprite)
 
         return sprite_group
+         
+    def create_jump_animation(self, pos):
+        jump_particle_sprite = ParticleEffect(pos, ParticleEffectType.JUMP)
+        self.particle_effects.add(jump_particle_sprite)
     
-    def setup_level(self):
-
-        self.world_sprites = {}
-        terrain_layout = import_csv_layout(self.level_data['terrain'])
-
-        self.sky = Sky(horizon=8)
-        world_width = len(terrain_layout[0]) * TILE_SIZE
-        self.water = Water(35, world_width)
-        self.clouds = Clouds(9, world_width, 20)
-
-        bg_palms_layout = import_csv_layout(self.level_data['bg_palms'])
-        self.world_sprites['bg_palms'] = self.create_tile_group(bg_palms_layout, 'bg_palms')
-
-        collidable_terrain_layout = update_layout_exclude(terrain_layout, ['5'])
-        self.world_sprites['terrain'] = self.create_tile_group(collidable_terrain_layout, 'terrain')
-        bg_terrain_layout = update_layout_to_only_contain(terrain_layout, ['5'])
-        self.world_sprites['bg_terrain'] = self.create_tile_group(bg_terrain_layout, 'bg_terrain')
-
-        crates_layout = import_csv_layout(self.level_data['crates'])
-        self.world_sprites['crates'] = self.create_tile_group(crates_layout, 'crates')
-
-        grass_layout = import_csv_layout(self.level_data['grass'])
-        self.world_sprites['grass'] = self.create_tile_group(grass_layout, 'grass')
-
-        coins_layout = import_csv_layout(self.level_data['coins'])
-        self.world_sprites['coins'] = self.create_tile_group(coins_layout, 'coins')
-
-        fg_palms_layout = import_csv_layout(self.level_data['fg_palms'])
-        self.world_sprites['fg_palms'] = self.create_tile_group(fg_palms_layout, 'fg_palms')
-
-        enemies_constraints_layout = import_csv_layout(self.level_data['enemies_constraints'])
-        self.world_sprites['enemies_constraints'] = self.create_tile_group(
-            enemies_constraints_layout, 'enemies_constraints'
-        )
-
-        enemies_layout = import_csv_layout(self.level_data['enemies'])
-        self.enemies = self.create_tile_group(enemies_layout, 'enemies')
-
-        player_layout = import_csv_layout(self.level_data['player'])
-        self.player, self.goal = self.setup_player(player_layout)
-    
+    def create_land_animation(self, pos):
+        land_particle_sprite = ParticleEffect(pos, ParticleEffectType.LAND)
+        self.particle_effects.add(land_particle_sprite)
+   
     def change_view(self, target):
         if target == "player":
             player_rect = self.player.sprite.rect
@@ -219,6 +224,21 @@ class Level:
         draw_outline(self.display_surface, self.player.sprite)
         draw_outline(self.display_surface, self.goal.sprite)
     
+    def back_to_overworld(self, is_completed):
+        next_level = self.next_level if is_completed else self.level
+        navigate_to = self.next_level if is_completed else -1
+        self.create_overworld(self.level, next_level, navigate_to)
+    
+    def check_if_completed(self):
+        """Checks if the player reached the goal."""
+        if pygame.sprite.collide_rect(self.player.sprite, self.goal.sprite):
+            self.back_to_overworld(True)
+        
+    def check_if_failed(self):
+        """Checks if the player is dead."""
+        if self.player.sprite.rect.bottom > SCREEN_HEIGHT:
+            self.back_to_overworld(False)
+    
     def run(self):
 
         # Player sprite
@@ -235,6 +255,9 @@ class Level:
         self.update_shift_speed()
         for type, sprites in self.world_sprites.items():
             sprites.update(self.shift_speed)
+
+        self.check_if_completed()
+        self.check_if_failed()
 
         # Draw
         self.draw()
