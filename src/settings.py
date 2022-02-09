@@ -1,20 +1,13 @@
 
+levels = {
+    0: {'node_pos': (110, 400), 'content': "This is level 0.", 'next_level': 1 },
+    1: { 'node_pos': (300, 220), 'content': "This is level 1.", 'next_level': 2 },
+    2: { 'node_pos': (480, 610), 'content': "This is level 2.", 'next_level': 3 },
+    3: { 'node_pos': (610, 350), 'content': "This is level 3.", 'next_level': 4 },
+    4: { 'node_pos': (880, 210), 'content': "This is level 4.", 'next_level': 5 },
+    5: { 'node_pos': (1050, 400), 'content': "This is level 5.", 'next_level': 5 },
+}
 
-
-# Map related settings
-# LEVEL_MAP = [
-#     "                                       ",
-#     "                                       ",
-#     "                    P                  ",
-#     "       XXXXXX      XXX           XX    ",
-#     "           XX                       XX ",
-#     "           XX            XXX           ",
-#     " X      XXXXXXX         XX             ",
-#     " XXX               X  XXXX        X XX ",
-#     "                   X  XXXX    XX  X X  ",
-#     "                   X  XXXXXX  XX  X X  ",
-#     " X  XXXX  XXXXX  XXX  XXXXXX  XX  X XX ",
-# ]
 TILE_SIZE = 64
 SCREEN_WIDTH = 1366
 VERTICAL_ROWS = 11
