@@ -4,7 +4,7 @@ from csv import reader
 
 import pygame
 
-from settings import TILE_SIZE
+from settings import TILE_SIZE, debug_font, colors
 
 
 class Direction(Enum):
@@ -124,3 +124,8 @@ def draw_outline(surface, sprite):
     rect = sprite.rect
     x, y, w, h = rect.x, rect.y, rect.width, rect.height
     pygame.draw.rect(surface, (255, 0, 0), (x, y, w, h), 1)
+
+
+def debug(text, surface: pygame.Surface, pos=(10, 10)):
+    content = debug_font.render(text, True, colors.dark)
+    surface.blit(content, pos)

@@ -14,6 +14,13 @@ class Node(AnimatedTile):
         self.status = status
         self.level = level
         self.rect = self.image.get_rect(center=pos)
+    
+    def animate(self):
+        if self.status != 'locked':
+            return super().animate()
+        tint_surface = self.image.copy()
+        tint_surface.fill(colors.dark, None, pygame.BLEND_RGB_MULT)
+        self.image.blit(tint_surface, (0, 0))
 
 
 class Hat(pygame.sprite.Sprite):
@@ -109,13 +116,8 @@ class Overworld:
 
     def draw_lines(self):
         available_points = [node.rect.center for node in self.nodes.sprites() if node.status != 'locked']
-        locked_points = [node.rect.center for node in self.nodes.sprites() if node.status == 'locked']
         if len(available_points) > 1:
-            pygame.draw.lines(self.display_surface, 'silver', False, available_points, 6)
-        if len(locked_points) > 1:
-            pygame.draw.lines(self.display_surface, '#333333', False, locked_points, 6)
-        if available_points and locked_points:
-            pygame.draw.lines(self.display_surface, '#333333', False, [available_points[-1], locked_points[0]], 6)
+            pygame.draw.lines(self.display_surface, colors.light, False, available_points, 6)
     
     def draw(self):
         self.sky.draw(self.display_surface)

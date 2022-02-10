@@ -1,7 +1,7 @@
 import pygame
 import sys
 from settings import *
-from level import Level
+from tools import debug
 
 from game import Game
 
@@ -20,6 +20,10 @@ if __name__ == "__main__":
         screen.fill('#000000')
         
         game.run()
+
+        if DEBUG:
+            debug_infos = 'DEBUG mode is ON...'
+            debug(debug_infos, screen)
         
         pygame.display.update()
         clock.tick(FPS)

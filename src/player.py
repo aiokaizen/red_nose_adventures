@@ -1,7 +1,7 @@
 import pygame
 from pygame.math import Vector2 as vec2
 from settings import *
-from tools import Direction, PlayerState, ParticleEffectType, import_folder
+from tools import Direction, PlayerState, ParticleEffectType, debug, import_folder
 from tile import Tile
 
 
