@@ -1,10 +1,17 @@
 from enum import Enum
-from os import walk
+import logging
+import os
+import json
 from csv import reader
+
+from cryptography import fernet
 
 import pygame
 
-from settings import TILE_SIZE, debug_font, colors
+from settings import SAVE_DIR, SECRET_KEY, TILE_SIZE, debug_font, colors, BASE_DIR
+
+
+logging.basicConfig(filename='game.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 
 
 class Direction(Enum):
@@ -37,6 +44,7 @@ class ParticleEffectType(Enum):
     RUN = "run"
     JUMP = "jump"
     LAND = "land"
+    EXPLOSION = 'expolosion'
 
     @classmethod
     def from_value(cls, value: str):
@@ -45,11 +53,47 @@ class ParticleEffectType(Enum):
         if hasattr(cls, value.upper()):
             return getattr(cls, value.upper())
         raise Exception(cls.__name__, "class has no '" + value + "' attribute")
-        
+
+
+def load_player_stats(path=''):
+
+    from stats import PlayerStats
+
+    if not path:
+        path = os.path.join(SAVE_DIR, 'save.ar')
+
+    if not os.path.exists(path) or not os.path.isfile(path):
+        logging.warn("Loading failed. Invalid file path.")
+        return PlayerStats()
+
+    with open(path, 'r') as file:
+        try:
+            stats = bytes(bytearray.fromhex(file.read()))
+            secret_key = SECRET_KEY
+            key = fernet.Fernet(secret_key)
+            json_stats = key.decrypt(stats)
+            player_stats = PlayerStats.from_dict(json.loads(json_stats))
+            return player_stats
+        except Exception as e:
+            logging.error(str(e))
+            return PlayerStats()
+
+
+def save_player_stats(player_stats):
+    path = os.path.join(SAVE_DIR, 'save.ar')
+    if not os.path.exists(SAVE_DIR):
+        os.mkdir(SAVE_DIR)
+    
+    with open(path, 'w') as file:
+        key = fernet.Fernet(SECRET_KEY)
+        enc_stats = key.encrypt(bytes(json.dumps(player_stats.as_dict()), 'utf-8'))
+        file.write(enc_stats.hex())
+        logging.debug("Player stats saved successfully.")
+
 
 def import_folder(path):
     surface_list = []
-    for _, _, img_files in walk(path):
+    for _, _, img_files in os.walk(path):
         for img in img_files:
             full_path = path + '/' + img
             surface_list.append(

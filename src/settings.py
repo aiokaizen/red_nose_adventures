@@ -1,7 +1,16 @@
+import os
 import pygame
 
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAVE_DIR = os.path.join(BASE_DIR, 'save')
+SECRET_KEY = b'vbKy2tcCyigQxr6VmdZK26QIhMuhAb_1fUfTNf38csc='
+
+DEBUG = False
+
 pygame.font.init()
+debug_font = pygame.font.Font(None, 24)
+ui_font = pygame.font.Font(os.path.join(BASE_DIR, 'graphics', 'ui', 'ARCADEPI.TTF'), 26)
 
 
 class Colors:
@@ -10,7 +19,8 @@ class Colors:
         self.dark = (51, 50, 61)
         self.light = (245, 241, 222)
         self.orange = (221, 198, 161)
-        self.red = (208, 170, 157)
+        self.red = (255, 10, 10)
+        self.skyred = (208, 170, 157)
         self.white = (255, 255, 255)
         self.green = (64, 119, 105)
 
@@ -36,7 +46,3 @@ RIGHT_CAMERA_BORDER = SCREEN_WIDTH - LEFT_CAMERA_BORDER
 
 # Time related settings
 FPS = 60
-
-# Debug
-DEBUG = False
-debug_font = pygame.font.Font(None, 24)

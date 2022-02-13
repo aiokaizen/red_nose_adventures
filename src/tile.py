@@ -1,5 +1,5 @@
 import pygame
-from settings import SCREEN_WIDTH, TILE_SIZE
+from settings import SCREEN_WIDTH, TILE_SIZE, BASE_DIR
 from tools import import_cut_graphics, import_folder
 
 
@@ -44,9 +44,9 @@ class CloudTile(Tile):
         super().__init__(pos)
         if graphic_id != -1:
             image_paths = [
-                '../graphics/decoration/clouds/1.png',
-                '../graphics/decoration/clouds/2.png',
-                '../graphics/decoration/clouds/3.png',
+                BASE_DIR + '/graphics/decoration/clouds/1.png',
+                BASE_DIR + '/graphics/decoration/clouds/2.png',
+                BASE_DIR + '/graphics/decoration/clouds/3.png',
             ]
             self.image = pygame.image.load(image_paths[graphic_id]).convert_alpha()
             offset_pos = (pos[0], pos[1] + TILE_SIZE)
@@ -62,7 +62,7 @@ class WaterTile(AnimatedTile):
 
     def __init__(self, pos):
         image_paths = [
-            '../graphics/decoration/water/',
+            BASE_DIR + '/graphics/decoration/water/',
         ]
         super().__init__(pos, image_paths)
         self.rect = self.image.get_rect(topleft=pos)
@@ -92,9 +92,9 @@ class PalmTile(AnimatedTile):
 
     def __init__(self, pos, graphic_id=-1):
         paths = [
-            '../graphics/terrain/palm_small',
-            '../graphics/terrain/palm_large',
-            '../graphics/terrain/palm_bg',
+            BASE_DIR + '/graphics/terrain/palm_small',
+            BASE_DIR + '/graphics/terrain/palm_large',
+            BASE_DIR + '/graphics/terrain/palm_bg',
         ]
         super().__init__(pos, paths, graphic_id)
         self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
@@ -113,9 +113,10 @@ class CoinTile(AnimatedTile):
 
     def __init__(self, pos, graphic_id=-1):
         paths = [
-            '../graphics/coins/gold',
-            '../graphics/coins/silver',
+            BASE_DIR + '/graphics/coins/gold',
+            BASE_DIR + '/graphics/coins/silver',
         ]
+        self.type = 'gold' if graphic_id == 0 else 'silver'
         super().__init__(pos, paths, graphic_id)
         center_x, center_y = pos[0] + int(TILE_SIZE / 2), pos[1] + int(TILE_SIZE / 2)
         self.rect = self.image.get_rect(center=(center_x, center_y))

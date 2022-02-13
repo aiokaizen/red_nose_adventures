@@ -3,24 +3,29 @@ from tile import *
 from player import HatTile, Player
 from settings import *
 from particles import ParticleEffect
-from tools import ParticleEffectType, draw_outline, import_csv_layout, update_layout_exclude, update_layout_to_only_contain
+from tools import (
+    ParticleEffectType, debug, draw_outline, import_csv_layout, update_layout_exclude,
+    update_layout_to_only_contain
+)
 from decoration import Clouds, Sky, Water
 from enemy import Enemy, EnemyConstraint
 from tools import get_level_data
+from ui import CoinsIndicator, HealthBar
 
 
 class Level:
 
-    def __init__(self, level, surface: pygame.Surface, create_overworld):
-        level_data = get_level_data(level)
+    def __init__(self, stats, surface: pygame.Surface, create_overworld):
+        level_data = get_level_data(stats.current_level)
         self.display_surface = surface
         self.level_data = level_data
         self.shift_speed = 0
         self.first_sprite = None
         self.last_sprite = None
         self.create_overworld = create_overworld
-        self.level = level
-        self.next_level = self.level + 1
+        self.stats = stats
+        self.next_level = self.stats.current_level + 1
+        self.coins_indicator = CoinsIndicator(self.display_surface)
 
         # Particle effects
         self.particle_effects = pygame.sprite.Group()
@@ -66,8 +71,16 @@ class Level:
         enemies_layout = import_csv_layout(self.level_data['enemies'])
         self.enemies = self.create_tile_group(enemies_layout, 'enemies')
 
+        # Setup UI
+        self.setup_ui()
+
         player_layout = import_csv_layout(self.level_data['player'])
         self.player, self.goal = self.setup_player(player_layout)
+    
+    def setup_ui(self):
+        self.health_bar = pygame.sprite.GroupSingle(
+            HealthBar(self.stats.health, self.stats.max_health, self.display_surface)
+        )
      
     def setup_player(self, layout):
 
@@ -84,7 +97,7 @@ class Level:
                             'jump': self.create_jump_animation,
                             'land': self.create_land_animation
                         }
-                        sprite = Player((x, y), self.display_surface, player_animations)
+                        sprite = Player((x, y), self.health_bar, self.display_surface, player_animations)
                         player_grp.add(sprite)
                     else:
                         sprite = HatTile((x, y))
@@ -118,16 +131,7 @@ class Level:
                         sprite = Enemy((x, y))
                     elif layout_type == 'enemies_constraints':
                         sprite = EnemyConstraint((x, y))
-                    elif layout_type == 'player':  # The last check is temporary
-                        if cell == 0:
-                            player_animations = {
-                                'jump': self.create_jump_animation,
-                                'land': self.create_land_animation
-                            }
-                            sprite = Player((x, y), self.display_surface, player_animations)
-                        else:
-                            sprite = HatTile((x, y))
-                        sprite_group = pygame.sprite.GroupSingle()
+
                     if not self.first_sprite and not self.last_sprite:
                         self.first_sprite = sprite
                         self.last_sprite = sprite
@@ -139,6 +143,10 @@ class Level:
 
         return sprite_group
          
+    # def restart_level(self):
+    #     new_level = Level(self.init_stats, self.display_surface, self.create_overworld)
+    #     self = new_level
+
     def create_jump_animation(self, pos):
         jump_particle_sprite = ParticleEffect(pos, ParticleEffectType.JUMP)
         self.particle_effects.add(jump_particle_sprite)
@@ -147,6 +155,10 @@ class Level:
         land_particle_sprite = ParticleEffect(pos, ParticleEffectType.LAND)
         self.particle_effects.add(land_particle_sprite)
    
+    def create_explosion_animation(self, pos):
+        explosion_particle_sprite = ParticleEffect(pos, ParticleEffectType.EXPLOSION)
+        self.particle_effects.add(explosion_particle_sprite)
+    
     def change_view(self, target):
         if target == "player":
             player_rect = self.player.sprite.rect
@@ -211,6 +223,9 @@ class Level:
         self.goal.draw(self.display_surface)
 
         self.particle_effects.draw(self.display_surface)
+
+        self.health_bar.sprite.draw()
+        self.coins_indicator.draw()
     
     def draw_outlines(self):
         for type, sprites in self.world_sprites.items():
@@ -225,19 +240,58 @@ class Level:
         draw_outline(self.display_surface, self.goal.sprite)
     
     def back_to_overworld(self, is_completed):
-        next_level = self.next_level if is_completed else self.level
+        next_level = self.next_level if is_completed else self.stats.current_level
         navigate_to = self.next_level if is_completed else -1
-        self.create_overworld(self.level, next_level, navigate_to)
+        self.create_overworld(next_level, navigate_to)
+    
+    def kill_enemy(self, enemy):
+        enemy.kill()
+        self.create_explosion_animation(enemy.rect.center)
+        self.player.sprite.direction.y = -15
     
     def check_if_completed(self):
         """Checks if the player reached the goal."""
         if pygame.sprite.collide_rect(self.player.sprite, self.goal.sprite):
             self.back_to_overworld(True)
         
-    def check_if_failed(self):
+    def check_if_player_is_dead(self):
         """Checks if the player is dead."""
-        if self.player.sprite.rect.bottom > SCREEN_HEIGHT:
+        if (
+            self.player.sprite.rect.bottom > SCREEN_HEIGHT or
+            self.player.sprite.health_bar.sprite.current_health <= 0
+        ):
             self.back_to_overworld(False)
+    
+    def check_if_collide_with_enemy(self):
+        for enemy in self.enemies.sprites():
+            if self.player.sprite.rect.colliderect(enemy.rect):
+                player_rect = self.player.sprite.rect
+                enemy_rect = enemy.rect
+                if self.player.sprite.direction.x > 0 or enemy.direction.x < 0:
+                    if self.player.sprite.direction.y == 0 or (
+                        abs(player_rect.right - enemy_rect.left) < abs(player_rect.bottom - enemy_rect.top)
+                    ):
+                        self.player.sprite.take_damage(enemy.damage)
+                    elif self.player.sprite.direction.y < 0:
+                        self.player.sprite.take_damage(enemy.damage)
+                    else:
+                        self.kill_enemy(enemy)
+                elif self.player.sprite.direction.x < 0 or enemy.direction.x > 0:
+                    if self.player.sprite.direction.y == 0 or (
+                        abs(enemy_rect.right - player_rect.left) < abs(player_rect.bottom - enemy_rect.top)
+                    ):
+                        self.player.sprite.take_damage(enemy.damage)
+                    elif self.player.sprite.direction.y < 0:
+                        self.player.sprite.take_damage(enemy.damage)
+                    else:
+                        self.kill_enemy(enemy)
+    
+    def check_coin_collision(self):
+        for coin in self.world_sprites['coins'].sprites():
+            if self.player.sprite.rect.colliderect(coin.rect):
+                self.player.sprite.collect_coin(coin.type)
+                self.coins_indicator.add_coin(coin.type)
+                coin.kill()
     
     def run(self):
 
@@ -256,8 +310,13 @@ class Level:
         for type, sprites in self.world_sprites.items():
             sprites.update(self.shift_speed)
 
+        self.check_if_collide_with_enemy()
+        self.check_coin_collision()
         self.check_if_completed()
-        self.check_if_failed()
+        self.check_if_player_is_dead()
+
+        # Update UI
+        self.health_bar.update()
 
         # Draw
         self.draw()

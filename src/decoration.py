@@ -11,9 +11,9 @@ class Sky:
 
     def __init__(self, horizon):
         self.horizon = horizon
-        self.top = pygame.image.load('../graphics/decoration/sky/sky_top.png').convert_alpha()
-        self.middle = pygame.image.load('../graphics/decoration/sky/sky_middle.png').convert_alpha()
-        self.bottom = pygame.image.load('../graphics/decoration/sky/sky_bottom.png').convert_alpha()
+        self.top = pygame.image.load(BASE_DIR + '/graphics/decoration/sky/sky_top.png').convert_alpha()
+        self.middle = pygame.image.load(BASE_DIR + '/graphics/decoration/sky/sky_middle.png').convert_alpha()
+        self.bottom = pygame.image.load(BASE_DIR + '/graphics/decoration/sky/sky_bottom.png').convert_alpha()
 
         # Stretch images
         self.top = pygame.transform.scale(self.top, (SCREEN_WIDTH, TILE_SIZE))

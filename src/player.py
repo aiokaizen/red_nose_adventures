@@ -1,5 +1,8 @@
+from math import sin
+
 import pygame
 from pygame.math import Vector2 as vec2
+
 from settings import *
 from tools import Direction, PlayerState, ParticleEffectType, debug, import_folder
 from tile import Tile
@@ -7,9 +10,8 @@ from tile import Tile
 
 class Player(pygame.sprite.Sprite):
 
-    def __init__(self, pos, surface: pygame.Surface, animation_functions: dict):
+    def __init__(self, pos, health_bar, surface: pygame.Surface, animation_functions: dict):
         super().__init__()
-        self.import_character_assets()
 
         # Dust particles animation
         self.import_particles_assets()
@@ -18,14 +20,20 @@ class Player(pygame.sprite.Sprite):
         self.display_surface = surface
 
         # Animation settings
+        self.import_character_assets()
+        self.state = PlayerState.IDLE
         self.animation_functions = animation_functions
         self.frame_index = 0
         self.animation_speed = 0.09
-        self.state = PlayerState.IDLE
         self.image = self.animations[self.state][self.frame_index]
-        # self.rect = self.image.get_rect(topleft=pos)
         self.rect = pygame.Rect(pos, [50, self.image.get_height()])
+        
         self.collidable = pygame.Surface((self.rect.width, self.rect.height))
+        
+        # Player stats
+        self.health_bar = health_bar
+        self.gold_coins = 0
+        self.silver_coins = 0
         self.is_facing_right = True
         self.touching_ground = False
         self.touching_left_wall = False
@@ -50,8 +58,12 @@ class Player(pygame.sprite.Sprite):
         self.is_falling = False
 
         # Abilities
-        self.can_jump_while_falling = True
-        self.can_double_jump = True
+        self.can_jump_while_falling = False
+        self.can_double_jump = False
+        self.is_invincible = 0
+        self.invincibility_start_time = -1
+        self.invincibility_duration = 0  # in miliseconds
+        self.invincibility_after_damage = 2000  # in miliseconds
     
     def import_character_assets(self):
         self.animations = {
@@ -63,7 +75,7 @@ class Player(pygame.sprite.Sprite):
             PlayerState.AIRBORN: [],
             PlayerState.AIRBORN_TOUCH_WALL: [],
         }
-        character_assets_dir = '../graphics/character/'
+        character_assets_dir = BASE_DIR + '/graphics/character/'
         for animation in self.animations.keys():
             animation_path = character_assets_dir + animation.value
             self.animations[animation] = import_folder(animation_path)
@@ -74,7 +86,7 @@ class Player(pygame.sprite.Sprite):
             ParticleEffectType.JUMP: [],
             ParticleEffectType.LAND: [],
         }
-        character_assets_dir = '../graphics/character/dust_particles/'
+        character_assets_dir = BASE_DIR + '/graphics/character/dust_particles/'
         for animation in self.particles_animations.keys():
             animation_path = character_assets_dir + animation.value
             self.particles_animations[animation] = import_folder(animation_path)
@@ -240,6 +252,20 @@ class Player(pygame.sprite.Sprite):
         if (self.can_move_right and running_speed > 0) or (self.can_move_left and running_speed < 0):
             self.rect.centerx += running_speed
 
+    def take_damage(self, damage):
+        if not self.is_invincible:
+            self.health_bar.sprite.take_damage(damage)
+            self.is_invincible = True
+            self.invincibility_start_time = pygame.time.get_ticks()
+            self.invincibility_duration = self.invincibility_after_damage
+    
+    def heal(self, value):
+        self.health_bar.sprite.heal(value)
+    
+    def get_invincibility_remaining_duration(self):
+        current_time = pygame.time.get_ticks()
+        return current_time - self.invincibility_start_time 
+
     def update(self, tiles_dict):
 
         # Get input
@@ -247,10 +273,17 @@ class Player(pygame.sprite.Sprite):
 
         self.run()
 
+        # Update stats
+        self.health_bar.update()
+        if self.is_invincible:
+            if self.get_invincibility_remaining_duration() >= self.invincibility_duration:
+                self.is_invincible = False
+                self.invincibility_start_time = -1
+
+        # Collisions
         collidable_tiles = [
             tiles_dict['terrain'], tiles_dict['fg_palms']
         ]
-
         # Horizontal collisions
         self.check_for_horizontal_collisions(collidable_tiles)
         
@@ -262,6 +295,12 @@ class Player(pygame.sprite.Sprite):
         self.update_state()
         self.animate()
         self.animate_particles()
+    
+    def collect_coin(self, type):
+        if type == 'gold':
+            self.gold_coins += 1
+        elif type == 'silver':
+            self.silver_coins += 1
 
     def draw(self, surface: pygame.Surface):
 
@@ -269,6 +308,8 @@ class Player(pygame.sprite.Sprite):
             pos = (self.rect.left, self.rect.bottom - self.image.get_height())
         else:
             pos = (self.rect.left + self.image.get_width() - 100, self.rect.bottom - self.image.get_height())
+        opacity = (1 + sin(self.get_invincibility_remaining_duration())) * 256 / 2 if self.is_invincible else 255
+        self.image.set_alpha(opacity)
         surface.blit(self.image, pos)
 
 class HatTile(Tile):
