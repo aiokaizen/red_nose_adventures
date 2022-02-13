@@ -71,6 +71,11 @@ class Overworld:
                 self.go_next_node()
             else:
                 self.go_previous_node()
+        
+        # Audio
+        pygame.mixer.music.load(os.path.join(BASE_DIR, 'audio', 'overworld_music.wav'))
+        pygame.mixer.music.set_volume(0.04)
+        pygame.mixer.music.play(-1)
     
     def setup_levels(self):
         self.nodes = pygame.sprite.Group()
@@ -115,6 +120,7 @@ class Overworld:
     
     def begin_level(self):
         if not self.hat.sprite.is_moving:
+            pygame.mixer.music.unload()
             self.create_level()
 
     def draw_lines(self):

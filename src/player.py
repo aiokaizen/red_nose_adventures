@@ -64,6 +64,17 @@ class Player(pygame.sprite.Sprite):
         self.invincibility_start_time = -1
         self.invincibility_duration = 0  # in miliseconds
         self.invincibility_after_damage = 2000  # in miliseconds
+
+        # Audio
+        self.soundeffects = {
+            'hit': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'hit.wav')),
+            'jump': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'jump.wav')),
+        }
+    
+    def play_soundeffect(self, soundeffect, volume=0.05):
+        sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
+        sound.set_volume(volume)
+        sound.play()
     
     def import_character_assets(self):
         self.animations = {
@@ -160,6 +171,7 @@ class Player(pygame.sprite.Sprite):
             self.is_airborn = True
             self.animation_functions['jump'](self.rect.midbottom + vec2(0, 9))
             self.jumps_left = self.jumps_left -1 if self.can_double_jump else 0
+            self.play_soundeffect('jump')
     
     def apply_gravity(self):
         self.direction.y += self.gravity
@@ -258,6 +270,7 @@ class Player(pygame.sprite.Sprite):
             self.is_invincible = True
             self.invincibility_start_time = pygame.time.get_ticks()
             self.invincibility_duration = self.invincibility_after_damage
+            self.play_soundeffect('hit')
     
     def heal(self, value):
         self.health_bar.sprite.heal(value)

@@ -32,6 +32,20 @@ class Level:
 
         self.setup_level()
         self.change_view('player')
+    
+        # Audio
+        self.soundeffects = {
+            'collect_coin': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'coin.wav')),
+            'stomp': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'stomp.wav')),
+        }
+        pygame.mixer.music.load(os.path.join(BASE_DIR, 'audio', 'level_music.wav'))
+        pygame.mixer.music.set_volume(0.04)
+        pygame.mixer.music.play(-1)
+
+    def play_soundeffect(self, soundeffect, volume=0.05):
+        sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
+        sound.set_volume(volume)
+        sound.play()
  
     def setup_level(self):
 
@@ -242,6 +256,7 @@ class Level:
     def back_to_overworld(self, is_completed):
         next_level = self.next_level if is_completed else self.stats.current_level
         navigate_to = self.next_level if is_completed else -1
+        pygame.mixer.music.unload()
         self.create_overworld(next_level, navigate_to)
     
     def kill_enemy(self, enemy):
@@ -262,7 +277,7 @@ class Level:
         ):
             self.back_to_overworld(False)
     
-    def check_if_collide_with_enemy(self):
+    def check_enemy_collision(self):
         for enemy in self.enemies.sprites():
             if self.player.sprite.rect.colliderect(enemy.rect):
                 player_rect = self.player.sprite.rect
@@ -276,6 +291,7 @@ class Level:
                         self.player.sprite.take_damage(enemy.damage)
                     else:
                         self.kill_enemy(enemy)
+                        self.play_soundeffect('stomp')
                 elif self.player.sprite.direction.x < 0 or enemy.direction.x > 0:
                     if self.player.sprite.direction.y == 0 or (
                         abs(enemy_rect.right - player_rect.left) < abs(player_rect.bottom - enemy_rect.top)
@@ -285,12 +301,14 @@ class Level:
                         self.player.sprite.take_damage(enemy.damage)
                     else:
                         self.kill_enemy(enemy)
+                        self.play_soundeffect('stomp')
     
     def check_coin_collision(self):
         for coin in self.world_sprites['coins'].sprites():
             if self.player.sprite.rect.colliderect(coin.rect):
                 self.player.sprite.collect_coin(coin.type)
                 self.coins_indicator.add_coin(coin.type)
+                self.play_soundeffect('collect_coin')
                 coin.kill()
     
     def run(self):
@@ -310,7 +328,7 @@ class Level:
         for type, sprites in self.world_sprites.items():
             sprites.update(self.shift_speed)
 
-        self.check_if_collide_with_enemy()
+        self.check_enemy_collision()
         self.check_coin_collision()
         self.check_if_completed()
         self.check_if_player_is_dead()
