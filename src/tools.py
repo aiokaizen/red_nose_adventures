@@ -173,3 +173,10 @@ def draw_outline(surface, sprite):
 def debug(text, surface: pygame.Surface, pos=(10, 10)):
     content = debug_font.render(text, True, colors.dark)
     surface.blit(content, pos)
+
+
+def scale_rect(rect, scale=10):
+    return pygame.Rect(
+        (rect.left - scale // 2, rect.top - scale // 2),
+        (rect.width + scale, rect.height + scale)
+    )

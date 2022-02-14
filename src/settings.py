@@ -10,7 +10,9 @@ DEBUG = False
 
 pygame.font.init()
 debug_font = pygame.font.Font(None, 24)
-ui_font = pygame.font.Font(os.path.join(BASE_DIR, 'graphics', 'ui', 'ARCADEPI.TTF'), 26)
+small_font = pygame.font.Font(os.path.join(BASE_DIR, 'graphics', 'ui', 'ARCADEPI.TTF'), 18)
+normal_font = pygame.font.Font(os.path.join(BASE_DIR, 'graphics', 'ui', 'ARCADEPI.TTF'), 26)
+large_font = pygame.font.Font(os.path.join(BASE_DIR, 'graphics', 'ui', 'ARCADEPI.TTF'), 40)
 
 
 class Colors:
@@ -23,6 +25,7 @@ class Colors:
         self.skyred = (208, 170, 157)
         self.white = (255, 255, 255)
         self.green = (64, 119, 105)
+        self.darkred = (187, 100, 100)
 
 colors = Colors()
 

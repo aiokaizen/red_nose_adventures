@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2 as vec
 
-from settings import colors, ui_font
+from settings import colors, normal_font
 
 
 class LevelUI:
@@ -70,8 +70,8 @@ class CoinsIndicator(pygame.sprite.Sprite):
     def draw(self):
         self.display_surface.blit(self.silver_coin, self.rect.topleft)
         self.display_surface.blit(self.gold_coin, vec(self.rect.topleft) + vec(102, 0))
-        silver_coins_indicator = ui_font.render(str(self.silver_coins), True, colors.black)
-        gold_coins_indicator = ui_font.render(str(self.gold_coins), True, colors.black)
+        silver_coins_indicator = normal_font.render(str(self.silver_coins), True, colors.black)
+        gold_coins_indicator = normal_font.render(str(self.gold_coins), True, colors.black)
         text_y_pos = self.rect.top + ((self.rect.height - silver_coins_indicator.get_height()) / 2)
         self.display_surface.blit(silver_coins_indicator, [self.rect.left + 42, text_y_pos])
         self.display_surface.blit(gold_coins_indicator, [self.rect.left + 144, text_y_pos])

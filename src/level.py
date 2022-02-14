@@ -15,14 +15,14 @@ from ui import CoinsIndicator, HealthBar
 
 class Level:
 
-    def __init__(self, stats, surface: pygame.Surface, create_overworld):
+    def __init__(self, stats, surface: pygame.Surface, show_menu):
         level_data = get_level_data(stats.current_level)
         self.display_surface = surface
         self.level_data = level_data
         self.shift_speed = 0
         self.first_sprite = None
         self.last_sprite = None
-        self.create_overworld = create_overworld
+        self.show_menu = show_menu
         self.stats = stats
         self.next_level = self.stats.current_level + 1
         self.coins_indicator = CoinsIndicator(self.display_surface)
@@ -38,9 +38,6 @@ class Level:
             'collect_coin': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'coin.wav')),
             'stomp': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'stomp.wav')),
         }
-        pygame.mixer.music.load(os.path.join(BASE_DIR, 'audio', 'level_music.wav'))
-        pygame.mixer.music.set_volume(0.04)
-        pygame.mixer.music.play(-1)
 
     def play_soundeffect(self, soundeffect, volume=0.05):
         sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
@@ -253,11 +250,11 @@ class Level:
         draw_outline(self.display_surface, self.player.sprite)
         draw_outline(self.display_surface, self.goal.sprite)
     
-    def back_to_overworld(self, is_completed):
+    def display_menu(self, is_completed):
         next_level = self.next_level if is_completed else self.stats.current_level
         navigate_to = self.next_level if is_completed else -1
         pygame.mixer.music.unload()
-        self.create_overworld(next_level, navigate_to)
+        self.show_menu(next_level, navigate_to)
     
     def kill_enemy(self, enemy):
         enemy.kill()
@@ -267,7 +264,7 @@ class Level:
     def check_if_completed(self):
         """Checks if the player reached the goal."""
         if pygame.sprite.collide_rect(self.player.sprite, self.goal.sprite):
-            self.back_to_overworld(True)
+            self.display_menu(True)
         
     def check_if_player_is_dead(self):
         """Checks if the player is dead."""
@@ -275,7 +272,7 @@ class Level:
             self.player.sprite.rect.bottom > SCREEN_HEIGHT or
             self.player.sprite.health_bar.sprite.current_health <= 0
         ):
-            self.back_to_overworld(False)
+            self.display_menu(False)
     
     def check_enemy_collision(self):
         for enemy in self.enemies.sprites():
