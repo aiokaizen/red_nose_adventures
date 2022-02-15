@@ -180,9 +180,6 @@ class Player(pygame.sprite.Sprite):
     def apply_gravity(self):
         self.direction.y += self.gravity
         self.rect.y += self.direction.y
-        # tmp code
-        if self.rect.y > SCREEN_HEIGHT:
-            self.rect.y = -70
     
     def check_for_horizontal_collisions(self, tile_group_list):
         collision_detected = False

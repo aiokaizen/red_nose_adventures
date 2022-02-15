@@ -26,6 +26,7 @@ class Level:
         self.stats = stats
         self.next_level = self.stats.current_level + 1
         self.coins_indicator = CoinsIndicator(self.display_surface)
+        self.is_paused = False
 
         # Particle effects
         self.particle_effects = pygame.sprite.Group()
@@ -264,6 +265,7 @@ class Level:
     def check_if_completed(self):
         """Checks if the player reached the goal."""
         if pygame.sprite.collide_rect(self.player.sprite, self.goal.sprite):
+            self.pause()
             self.display_menu(True)
         
     def check_if_player_is_dead(self):
@@ -272,6 +274,7 @@ class Level:
             self.player.sprite.rect.bottom > SCREEN_HEIGHT or
             self.player.sprite.health_bar.sprite.current_health <= 0
         ):
+            self.pause()
             self.display_menu(False)
     
     def check_enemy_collision(self):
@@ -309,7 +312,22 @@ class Level:
                 self.create_coin_collect_animation(coin.rect.center)
                 coin.kill()
     
+    def pause(self):
+        self.stats.gold_coins = self.coins_indicator.gold_coins
+        self.stats.silver_coins = self.coins_indicator.silver_coins
+        self.is_paused = True
+        self.shift_speed = 0
+    
     def run(self):
+
+        # Draw
+        self.draw()
+        if DEBUG is True:
+            self.draw_outlines()
+
+        # Pause the game
+        if self.is_paused:
+            return
 
         # Player sprite
         self.player.update(self.world_sprites)
@@ -323,7 +341,7 @@ class Level:
 
         # Level tiles
         self.update_shift_speed()
-        for type, sprites in self.world_sprites.items():
+        for sprites in self.world_sprites.values():
             sprites.update(self.shift_speed)
 
         self.check_enemy_collision()
@@ -333,8 +351,3 @@ class Level:
 
         # Update UI
         self.health_bar.update()
-
-        # Draw
-        self.draw()
-        if DEBUG is True:
-            self.draw_outlines()
