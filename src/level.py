@@ -154,9 +154,9 @@ class Level:
 
         return sprite_group
          
-    # def restart_level(self):
-    #     new_level = Level(self.init_stats, self.display_surface, self.create_overworld)
-    #     self = new_level
+    def create_coin_collect_animation(self, pos):
+        coin_animation = ParticleEffect(pos, ParticleEffectType.COLLECT_COIN)
+        self.particle_effects.add(coin_animation)
 
     def create_jump_animation(self, pos):
         jump_particle_sprite = ParticleEffect(pos, ParticleEffectType.JUMP)
@@ -306,6 +306,7 @@ class Level:
                 self.player.sprite.collect_coin(coin.type)
                 self.coins_indicator.add_coin(coin.type)
                 self.play_soundeffect('collect_coin')
+                self.create_coin_collect_animation(coin.rect.center)
                 coin.kill()
     
     def run(self):

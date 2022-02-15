@@ -1,4 +1,4 @@
-from asyncio import current_task
+from os import path
 import pygame
 from pygame import Vector2 as vec
 
@@ -10,7 +10,7 @@ from tile import AnimatedTile
 class Node(AnimatedTile):
 
     def __init__(self, pos, level, status):
-        animation_path = f"../graphics/overworld/{level - 1}"
+        animation_path = path.join(BASE_DIR, 'graphics', 'overworld', f"{level - 1}")
         super().__init__(pos, [animation_path])
         self.status = status
         self.level = level
@@ -28,7 +28,7 @@ class Hat(pygame.sprite.Sprite):
 
     def __init__(self, pos):
         super().__init__()
-        self.image = pygame.image.load("../graphics/overworld/hat.png").convert_alpha()
+        self.image = pygame.image.load(path.join(BASE_DIR, 'graphics', 'overworld', "hat.png")).convert_alpha()
         self.rect = self.image.get_rect(center=pos)
         self.is_moving = False
         self.pos = vec(pos)

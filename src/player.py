@@ -1,3 +1,5 @@
+from os import path
+
 from math import sin
 
 import pygame
@@ -16,7 +18,7 @@ class Player(pygame.sprite.Sprite):
         # Dust particles animation
         self.import_particles_assets()
         self.particles_frame_index = 0
-        self.particles_animation_speed = 0.2
+        self.particles_animation_speed = ANIMATION_FPS
         self.display_surface = surface
 
         # Animation settings
@@ -24,7 +26,7 @@ class Player(pygame.sprite.Sprite):
         self.state = PlayerState.IDLE
         self.animation_functions = animation_functions
         self.frame_index = 0
-        self.animation_speed = 0.09
+        self.animation_speed = ANIMATION_FPS
         self.image = self.animations[self.state][self.frame_index]
         self.rect = pygame.Rect(pos, [50, self.image.get_height()])
         
@@ -105,8 +107,9 @@ class Player(pygame.sprite.Sprite):
     def animate(self):
         if not self.state == PlayerState.LAND:
             animation = self.animations[self.state]
-            self.frame_index += self.animation_speed
-            if self.frame_index > len(animation):
+            animation_speed = self.animation_speed / FPS
+            self.frame_index += animation_speed
+            if self.frame_index >= len(animation):
                 self.frame_index = 0
 
             image = animation[int(self.frame_index)]
@@ -118,8 +121,9 @@ class Player(pygame.sprite.Sprite):
             animation = self.particles_animations[ParticleEffectType.RUN]
 
             # Get next frame
-            self.particles_frame_index += self.particles_animation_speed
-            if self.particles_frame_index > len(animation):
+            animation_speed = self.particles_animation_speed / FPS
+            self.particles_frame_index += animation_speed
+            if self.particles_frame_index >= len(animation):
                 self.particles_frame_index = 0
             
             # Animate the particles
@@ -329,7 +333,7 @@ class HatTile(Tile):
 
     def __init__(self, pos):
         super().__init__(pos)
-        self.image = pygame.image.load("../graphics/character/hat.png").convert_alpha()
+        self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "character", "hat.png")).convert_alpha()
         pos = (
             pos[0] + int(TILE_SIZE / 2) - (self.image.get_width() / 2),
             pos[1] + int(TILE_SIZE / 2) - (self.image.get_height() / 2)

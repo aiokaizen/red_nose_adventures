@@ -45,6 +45,7 @@ class ParticleEffectType(Enum):
     JUMP = "jump"
     LAND = "land"
     EXPLOSION = 'expolosion'
+    COLLECT_COIN = 'collect_coin'
 
     @classmethod
     def from_value(cls, value: str):
@@ -94,8 +95,9 @@ def save_player_stats(player_stats):
 def import_folder(path):
     surface_list = []
     for _, _, img_files in os.walk(path):
+        img_files.sort()
         for img in img_files:
-            full_path = path + '/' + img
+            full_path = os.path.join(path, img)
             surface_list.append(
                 pygame.image.load(full_path).convert_alpha()
             )
@@ -103,7 +105,7 @@ def import_folder(path):
 
 
 def get_level_data(level):
-    base_dir = f"../levels/level_{level}"
+    base_dir = os.path.join(BASE_DIR, "levels", f"level_{level}")
     return {
         'terrain': f'{base_dir}/level_{level}_terrain.csv',
         'player': f'{base_dir}/level_{level}_player.csv',

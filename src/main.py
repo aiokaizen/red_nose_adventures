@@ -9,6 +9,7 @@ from game import Game
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Red nose adventures")
     clock = pygame.time.Clock()
     game  = Game(screen)
 

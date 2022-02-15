@@ -27,10 +27,11 @@ class Game:
 
         self.create_overworld(self.player_stats.max_level)
 
-    def create_level(self):
+    def create_level(self, restart_music=True):
         self.level = Level(self.player_stats, self.display_surface, self.show_menu)
-        self.overworld_bg_music.fadeout(100)
-        self.level_bg_music.play(-1)
+        if restart_music:
+            self.overworld_bg_music.fadeout(100)
+            self.level_bg_music.play(-1)
         self.active_screen = 'level'
     
     def show_menu(self, max_level=-1, navigate_to=-1):
@@ -38,7 +39,6 @@ class Game:
         self.active_screen = 'menu'
     
     def create_overworld(self, max_level=-1, navigate_to=-1):
-        print('view map')
         if max_level > self.player_stats.max_level:
             self.player_stats.max_level = max_level
         stats = copy(self.player_stats)
@@ -52,7 +52,7 @@ class Game:
         self.active_screen = 'overworld'
     
     def restart(self):
-        print('restarting the level')
+        self.create_level(False)
     
     def run(self):
         if self.active_screen == 'overworld':

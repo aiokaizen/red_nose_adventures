@@ -1,7 +1,9 @@
+from os import path
+
 import pygame
 from pygame import Vector2 as vec
 
-from settings import TILE_SIZE
+from settings import ANIMATION_FPS, FPS, TILE_SIZE, BASE_DIR
 from tile import Tile
 from tools import import_folder
 
@@ -13,8 +15,8 @@ class Enemy(pygame.sprite.Sprite):
         self.direction = vec(2, 0)
         self.damage = 25
         self.frame_index = 0
-        self.animation_speed = 0.15
-        self.keyframes = import_folder("../graphics/enemy/run")
+        self.animation_speed = ANIMATION_FPS
+        self.keyframes = import_folder(path.join(BASE_DIR, "graphics", "enemy", "run"))
         self.image = self.keyframes[self.frame_index]
         offset_x, offset_y = pos[0] + int(TILE_SIZE / 2), pos[1] + TILE_SIZE
         self.rect = self.image.get_rect(midbottom=(offset_x, offset_y))
@@ -28,7 +30,8 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(midbottom=self.rect.midbottom)
 
         # Choose next frame
-        self.frame_index += self.animation_speed
+        animation_speed = self.animation_speed / FPS
+        self.frame_index += animation_speed
         if self.frame_index > len(self.keyframes):
             self.frame_index = 0
 

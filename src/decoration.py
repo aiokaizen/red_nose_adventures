@@ -1,4 +1,5 @@
 import random
+from os.path import join
 
 import pygame
 
@@ -44,9 +45,9 @@ class Clouds:
     
     def generate_clouds(self):
         if self.overworld_clouds:
-            cloud_surface_list = import_folder("../graphics/overworld/clouds/")
+            cloud_surface_list = import_folder(join(BASE_DIR, "graphics", "overworld", "clouds"))
         else:
-            cloud_surface_list = import_folder("../graphics/decoration/clouds/")
+            cloud_surface_list = import_folder(join(BASE_DIR, "graphics", "decoration", "clouds"))
         self.cloud_sprites = pygame.sprite.Group()
         for n in range(self.cloud_number):
             cloud = random.choice(cloud_surface_list)

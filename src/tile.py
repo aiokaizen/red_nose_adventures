@@ -1,5 +1,7 @@
+from os import path
+
 import pygame
-from settings import SCREEN_WIDTH, TILE_SIZE, BASE_DIR
+from settings import ANIMATION_FPS, FPS, SCREEN_WIDTH, TILE_SIZE, BASE_DIR
 from tools import import_cut_graphics, import_folder
 
 
@@ -22,14 +24,14 @@ class AnimatedTile(Tile):
     def __init__(self, pos, animations_dirs, graphic_id=0):
         super().__init__(pos)
         self.frame_index = 0
-        self.animation_speed = 0.15
+        self.animation_speed = ANIMATION_FPS
         self.keyframes = import_folder(animations_dirs[graphic_id])
         self.image = self.keyframes[int(self.frame_index)]
         self.rect = self.image.get_rect(bottomleft=pos)
     
     def animate(self):
         self.image = self.keyframes[int(self.frame_index)]
-        self.frame_index += self.animation_speed
+        self.frame_index += self.animation_speed / FPS
         if self.frame_index >= len(self.keyframes):
             self.frame_index = 0
     
@@ -73,7 +75,7 @@ class TerrainTile(Tile):
     def __init__(self, pos, graphic_id=-1):
         super().__init__(pos)
         if graphic_id != -1:
-            terrain_tile_list = import_cut_graphics("../graphics/terrain/terrain_tiles.png")
+            terrain_tile_list = import_cut_graphics(path.join(BASE_DIR, "graphics", "terrain", "terrain_tiles.png"))
             self.image = terrain_tile_list[graphic_id]
             self.rect = self.image.get_rect(topleft=pos)
 
@@ -83,7 +85,7 @@ class GrassTile(Tile):
     def __init__(self, pos, graphic_id=-1):
         super().__init__(pos)
         if graphic_id != -1:
-            grass_tile_list = import_cut_graphics("../graphics/decoration/grass/grass.png")
+            grass_tile_list = import_cut_graphics(path.join(BASE_DIR, "graphics", "decoration", "grass", "grass.png"))
             self.image = grass_tile_list[graphic_id]
             self.rect = self.image.get_rect(topleft=pos)
 
@@ -105,7 +107,7 @@ class CrateTile(Tile):
     def __init__(self, pos, graphic_id=-1):
         super().__init__(pos)
         if graphic_id != -1:
-            self.image = pygame.image.load("../graphics/terrain/crate.png").convert_alpha()
+            self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "terrain", "crate.png")).convert_alpha()
             self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
 
 
@@ -113,8 +115,8 @@ class CoinTile(AnimatedTile):
 
     def __init__(self, pos, graphic_id=-1):
         paths = [
-            BASE_DIR + '/graphics/coins/gold',
-            BASE_DIR + '/graphics/coins/silver',
+            BASE_DIR + '/graphics/items/coins/gold',
+            BASE_DIR + '/graphics/items/coins/silver',
         ]
         self.type = 'gold' if graphic_id == 0 else 'silver'
         super().__init__(pos, paths, graphic_id)

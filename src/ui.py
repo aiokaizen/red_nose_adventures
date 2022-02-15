@@ -1,7 +1,9 @@
+from os import path
+
 import pygame
 from pygame import Vector2 as vec
 
-from settings import colors, normal_font
+from settings import colors, normal_font, BASE_DIR
 
 
 class LevelUI:
@@ -23,7 +25,7 @@ class HealthBar(pygame.sprite.Sprite):
         self.displayed_health = current_health
         self.max_health = max_health
         self.display_surface = surface
-        self.image = pygame.image.load("../graphics/ui/health_bar.png").convert_alpha()
+        self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "ui", "health_bar.png")).convert_alpha()
         self.rect = self.image.get_rect(topleft=(30, 30))
     
     def get_bar_rect(self):
@@ -57,8 +59,8 @@ class CoinsIndicator(pygame.sprite.Sprite):
         self.display_surface = surface
         self.gold_coins = 0
         self.silver_coins = 0
-        self.gold_coin = pygame.image.load("../graphics/coins/gold/0.png").convert_alpha()
-        self.silver_coin = pygame.image.load("../graphics/coins/silver/0.png").convert_alpha()
+        self.gold_coin = pygame.image.load(path.join(BASE_DIR, "graphics", "items", "coins", "gold", "0.png")).convert_alpha()
+        self.silver_coin = pygame.image.load(path.join(BASE_DIR, "graphics", "items", "coins", "silver", "0.png")).convert_alpha()
         self.rect = pygame.Rect(30, 100, 160, 32)
     
     def add_coin(self, type):
