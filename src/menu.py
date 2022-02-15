@@ -36,10 +36,12 @@ class Menu:
         # Restart button
         self.restart_btn_label = large_font.render('RESTART', True, colors.dark)
         self.restart_btn_rect = self.restart_btn_label.get_rect(center=self.get_btn_restart_position())
+        self.highlight_restart = False
 
         # Back to levels button
         self.view_map_btn_label = normal_font.render('RETURN TO MAP', True, colors.dark)
         self.view_map_btn_rect = self.view_map_btn_label.get_rect(center=self.get_btn_view_map_position())
+        self.highlight_view_map = False
     
     def get_input(self):
         mouse_keys = pygame.mouse.get_pressed()
@@ -52,12 +54,13 @@ class Menu:
             return
         
         if keyboard_keys[pygame.K_RETURN]:
+            self.highlight_restart = True
             self.restart()
         elif keyboard_keys[pygame.K_ESCAPE]:
+            self.highlight_view_map = True
             self.view_map()
     
     def get_btn_restart_position(self):
-        bw = self.restart_btn_label.get_width()  # button width
         bh = self.restart_btn_label.get_height()  # button height
         return vec(
             self.menu_rect.centerx,
@@ -65,7 +68,6 @@ class Menu:
         )
     
     def get_btn_view_map_position(self):
-        bw = self.view_map_btn_label.get_width()  # button width
         bh = self.view_map_btn_label.get_height()  # button height
         return vec(
             self.menu_rect.centerx,
@@ -77,6 +79,16 @@ class Menu:
         return (
             stats.gold_coins * 500 + stats.silver_coins * 100
         )
+    
+    def hover(self, button):
+        if button == 'restart':
+            button_bg_rect = scale_rect(self.restart_btn_rect, 20)
+        elif button == 'view_map':
+            button_bg_rect = scale_rect(self.view_map_btn_rect, 20)
+        btn_bg = pygame.Surface(button_bg_rect.size)
+        btn_bg.fill(colors.light)
+        self.display_surface.blit(btn_bg, button_bg_rect)
+
     
     def draw(self):
 
@@ -108,18 +120,16 @@ class Menu:
         self.display_surface.blit(self.score_value_label, self.score_value_rect)
 
         # Button restart
-        if self.restart_btn_rect.collidepoint(pygame.mouse.get_pos()):
-            restart_bg_rect = scale_rect(self.restart_btn_rect, 20)
-            restart_bg = pygame.Surface(restart_bg_rect.size)
-            restart_bg.fill(colors.light)
-            self.display_surface.blit(restart_bg, restart_bg_rect)
+        if self.highlight_restart:
+            self.hover('restart')
+        elif self.restart_btn_rect.collidepoint(pygame.mouse.get_pos()):
+            self.hover('restart')
         self.display_surface.blit(self.restart_btn_label, self.restart_btn_rect)  # button_offset)
 
         # Button view map
-        if self.view_map_btn_rect.collidepoint(pygame.mouse.get_pos()):
-            view_map_bg_rect = scale_rect(self.view_map_btn_rect, 20)
-            view_map_bg = pygame.Surface(view_map_bg_rect.size)
-            view_map_bg.fill(colors.light)
-            self.display_surface.blit(view_map_bg, view_map_bg_rect)
+        if self.highlight_view_map:
+            self.hover('view_map')
+        elif self.view_map_btn_rect.collidepoint(pygame.mouse.get_pos()):
+            self.hover('view_map')
         self.display_surface.blit(self.view_map_btn_label, self.view_map_btn_rect)
         

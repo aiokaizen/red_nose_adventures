@@ -108,10 +108,12 @@ def get_level_data(level):
     base_dir = os.path.join(BASE_DIR, "levels", f"level_{level}")
     return {
         'terrain': f'{base_dir}/level_{level}_terrain.csv',
+        'bg_terrain': f'{base_dir}/level_{level}_terrain_bg.csv',
         'player': f'{base_dir}/level_{level}_player.csv',
         'enemies': f'{base_dir}/level_{level}_enemies.csv',
         'enemies_constraints': f'{base_dir}/level_{level}_enemies_constraints.csv',
         'coins': f'{base_dir}/level_{level}_coins.csv',
+        'spikes': f'{base_dir}/level_{level}_spikes.csv',
         'grass': f'{base_dir}/level_{level}_grass.csv',
         'crates': f'{base_dir}/level_{level}_crates.csv',
         'fg_palms': f'{base_dir}/level_{level}_fg_palms.csv',
@@ -168,6 +170,11 @@ def update_layout_to_only_contain(layout, values):
 
 def draw_outline(surface, sprite):
     rect = sprite.rect
+    if hasattr(sprite, 'collide_rect'):
+        collide_rect = sprite.collide_rect
+        x, y, w, h = collide_rect.x, collide_rect.y, collide_rect.width, collide_rect.height
+        pygame.draw.rect(surface, (255, 0, 0), (x, y, w, h), 1)
+
     x, y, w, h = rect.x, rect.y, rect.width, rect.height
     pygame.draw.rect(surface, (255, 0, 0), (x, y, w, h), 1)
 

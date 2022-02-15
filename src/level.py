@@ -44,6 +44,13 @@ class Level:
         sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
         sound.set_volume(volume)
         sound.play()
+    
+    def get_bg_terrain_tile_ids(self):
+        return [
+            '13',
+            '4', '5', '6', '7', '8', '9', '10',
+            '16', '17', '18', '19', '20', '21', '22', '23'
+        ]
  
     def setup_level(self):
 
@@ -58,10 +65,12 @@ class Level:
         bg_palms_layout = import_csv_layout(self.level_data['bg_palms'])
         self.world_sprites['bg_palms'] = self.create_tile_group(bg_palms_layout, 'bg_palms')
 
-        collidable_terrain_layout = update_layout_exclude(terrain_layout, ['5'])
-        self.world_sprites['terrain'] = self.create_tile_group(collidable_terrain_layout, 'terrain')
-        bg_terrain_layout = update_layout_to_only_contain(terrain_layout, ['5'])
+        bg_terrain2_layout = import_csv_layout(self.level_data['bg_terrain'])
+        self.world_sprites['bg_terrain2'] = self.create_tile_group(bg_terrain2_layout, 'bg_terrain')
+        bg_terrain_layout = update_layout_to_only_contain(terrain_layout, self.get_bg_terrain_tile_ids())
         self.world_sprites['bg_terrain'] = self.create_tile_group(bg_terrain_layout, 'bg_terrain')
+        collidable_terrain_layout = update_layout_exclude(terrain_layout, self.get_bg_terrain_tile_ids())
+        self.world_sprites['terrain'] = self.create_tile_group(collidable_terrain_layout, 'terrain')
 
         crates_layout = import_csv_layout(self.level_data['crates'])
         self.world_sprites['crates'] = self.create_tile_group(crates_layout, 'crates')
@@ -72,16 +81,19 @@ class Level:
         coins_layout = import_csv_layout(self.level_data['coins'])
         self.world_sprites['coins'] = self.create_tile_group(coins_layout, 'coins')
 
-        fg_palms_layout = import_csv_layout(self.level_data['fg_palms'])
-        self.world_sprites['fg_palms'] = self.create_tile_group(fg_palms_layout, 'fg_palms')
-
         enemies_constraints_layout = import_csv_layout(self.level_data['enemies_constraints'])
         self.world_sprites['enemies_constraints'] = self.create_tile_group(
             enemies_constraints_layout, 'enemies_constraints'
         )
 
+        spikes_layout = import_csv_layout(self.level_data['spikes'])
+        self.world_sprites['spikes'] = self.create_tile_group(spikes_layout, 'spikes')
+
         enemies_layout = import_csv_layout(self.level_data['enemies'])
         self.enemies = self.create_tile_group(enemies_layout, 'enemies')
+
+        fg_palms_layout = import_csv_layout(self.level_data['fg_palms'])
+        self.world_sprites['fg_palms'] = self.create_tile_group(fg_palms_layout, 'fg_palms')
 
         # Setup UI
         self.setup_ui()
@@ -112,7 +124,7 @@ class Level:
                         sprite = Player((x, y), self.health_bar, self.display_surface, player_animations)
                         player_grp.add(sprite)
                     else:
-                        sprite = HatTile((x, y))
+                        sprite = FlagTile((x, y))
                         goal_grp.add(sprite)
         
         return player_grp, goal_grp
@@ -127,9 +139,7 @@ class Level:
                     x, y = j * TILE_SIZE, i * TILE_SIZE
                     if layout_type == 'water':
                         sprite = WaterTile((x, y))
-                    elif layout_type == 'terrain':
-                        sprite = TerrainTile((x, y), cell)
-                    elif layout_type == 'bg_terrain':
+                    elif layout_type in ['terrain', 'bg_terrain', 'bg_terrain2']:
                         sprite = TerrainTile((x, y), cell)
                     elif layout_type == 'grass':
                         sprite = GrassTile((x, y), cell)
@@ -143,6 +153,8 @@ class Level:
                         sprite = Enemy((x, y))
                     elif layout_type == 'enemies_constraints':
                         sprite = EnemyConstraint((x, y))
+                    elif layout_type == 'spikes':
+                        sprite = SpikesTile((x, y))
 
                     if not self.first_sprite and not self.last_sprite:
                         self.first_sprite = sprite
@@ -185,10 +197,9 @@ class Level:
         """ Manually moves the camera by a specific value(x, y)"""
 
         # Move world objects (Terrain, coins, palms, ...)
-        for type, sprites in self.world_sprites.items():
+        for sprites in self.world_sprites.values():
             for tile in sprites.sprites():
-                tile.rect.x += shift[0]
-                tile.rect.y += shift[1]
+                tile.update(shift[0])
         
         # Move the enemies
         for enemy in self.enemies.sprites():
@@ -277,6 +288,13 @@ class Level:
             self.pause()
             self.display_menu(False)
     
+    def check_spike_collision(self):
+        for spike in self.world_sprites['spikes'].sprites():
+            if self.player.sprite.rect.colliderect(spike.collide_rect):
+                self.player.sprite.take_damage(spike.damage)
+                self.player.sprite.direction.x *= -1
+                self.player.sprite.direction.y = -12
+    
     def check_enemy_collision(self):
         for enemy in self.enemies.sprites():
             if self.player.sprite.rect.colliderect(enemy.rect):
@@ -344,6 +362,7 @@ class Level:
         for sprites in self.world_sprites.values():
             sprites.update(self.shift_speed)
 
+        self.check_spike_collision()
         self.check_enemy_collision()
         self.check_coin_collision()
         self.check_if_completed()
