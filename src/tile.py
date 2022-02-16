@@ -15,8 +15,8 @@ class Tile(pygame.sprite.Sprite):
         else:
             self.rect = pygame.Rect(*pos, TILE_SIZE, TILE_SIZE)
     
-    def update(self, x_shift):
-        self.rect.x += x_shift
+    def update(self):
+        pass
 
 
 class AnimatedTile(Tile):
@@ -35,9 +35,8 @@ class AnimatedTile(Tile):
         if self.frame_index >= len(self.keyframes):
             self.frame_index = 0
     
-    def update(self, x_shift):
+    def update(self):
         self.animate()
-        self.rect.x += x_shift
 
 
 class CloudTile(Tile):
@@ -135,10 +134,6 @@ class SpikesTile(Tile):
         self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
         self.collide_rect = pygame.Rect(self.rect.left, self.rect.top + 32, self.rect.width, self.rect.height - 32)
         self.damage = 25
-
-    def update(self, x_shift):
-        self.rect.x += x_shift
-        self.collide_rect.x += x_shift
 
 
 class FlagTile(AnimatedTile):

@@ -57,8 +57,8 @@ class Clouds:
             sprite = Tile((x, y), cloud)
             self.cloud_sprites.add(sprite)
 
-    def draw(self, surface, shift_x):
-        self.cloud_sprites.update(shift_x)
+    def draw(self, surface):
+        self.cloud_sprites.update()
         self.cloud_sprites.draw(surface)
 
 
@@ -76,6 +76,6 @@ class Water:
             sprite = WaterTile((x, y))
             self.water_sprites.add(sprite)
 
-    def draw(self, surface, x_shift):
-        self.water_sprites.update(x_shift)
+    def draw(self, surface):
+        self.water_sprites.update()
         self.water_sprites.draw(surface)

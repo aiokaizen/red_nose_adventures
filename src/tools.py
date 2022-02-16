@@ -7,8 +7,9 @@ from csv import reader
 from cryptography import fernet
 
 import pygame
+from pygame import Vector2 as vec
 
-from settings import SAVE_DIR, SECRET_KEY, TILE_SIZE, debug_font, colors, BASE_DIR
+from settings import SAVE_DIR, SCREEN_WIDTH, SECRET_KEY, TILE_SIZE, debug_font, colors, BASE_DIR
 
 
 logging.basicConfig(filename='game.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
@@ -54,6 +55,27 @@ class ParticleEffectType(Enum):
         if hasattr(cls, value.upper()):
             return getattr(cls, value.upper())
         raise Exception(cls.__name__, "class has no '" + value + "' attribute")
+
+
+class Debug:
+
+    def __init__(self, position='topleft'):
+        self.count = 0
+        self.position = position
+        self.start_position = vec(SCREEN_WIDTH - 400, 10)
+        self.step = vec(0, 20)
+    
+    def reset(self):
+        self.count = 0
+
+    def write(self, text, surface: pygame.Surface, pos=()):
+        pos = self.start_position + (self.step * self.count) if not pos else pos
+        content = debug_font.render(text, True, colors.dark)
+        surface.blit(content, pos)
+        self.count += 1
+
+
+debug = Debug()
 
 
 def load_player_stats(path=''):
@@ -177,11 +199,6 @@ def draw_outline(surface, sprite):
 
     x, y, w, h = rect.x, rect.y, rect.width, rect.height
     pygame.draw.rect(surface, (255, 0, 0), (x, y, w, h), 1)
-
-
-def debug(text, surface: pygame.Surface, pos=(10, 10)):
-    content = debug_font.render(text, True, colors.dark)
-    surface.blit(content, pos)
 
 
 def scale_rect(rect, scale=10):

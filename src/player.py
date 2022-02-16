@@ -316,7 +316,7 @@ class Player(pygame.sprite.Sprite):
         elif type == 'silver':
             self.silver_coins += 1
 
-    def draw(self, surface: pygame.Surface):
+    def draw(self):
 
         if self.is_facing_right or self.state == PlayerState.JUMP:
             pos = (self.rect.left, self.rect.bottom - self.image.get_height())
@@ -324,7 +324,7 @@ class Player(pygame.sprite.Sprite):
             pos = (self.rect.left + self.image.get_width() - 100, self.rect.bottom - self.image.get_height())
         opacity = (1 + sin(self.get_invincibility_remaining_duration())) * 256 / 2 if self.is_invincible else 255
         self.image.set_alpha(opacity)
-        surface.blit(self.image, pos)
+        self.display_surface.blit(self.image, pos)
 
 class HatTile(Tile):
 

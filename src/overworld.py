@@ -124,7 +124,7 @@ class Overworld:
     
     def draw(self):
         self.sky.draw(self.display_surface)
-        self.clouds.draw(self.display_surface, 0)
+        self.clouds.draw(self.display_surface)
         self.draw_lines()
         self.nodes.draw(self.display_surface)
         self.hat.draw(self.display_surface)
@@ -136,5 +136,5 @@ class Overworld:
                 self.allow_input = True
         self.get_input()
         self.hat.update()
-        self.nodes.update(0)
+        self.nodes.update()
         self.draw()

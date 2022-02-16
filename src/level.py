@@ -1,4 +1,5 @@
 import pygame
+from camera import CameraGroup
 from tile import *
 from player import HatTile, Player
 from settings import *
@@ -19,7 +20,6 @@ class Level:
         level_data = get_level_data(stats.current_level)
         self.display_surface = surface
         self.level_data = level_data
-        self.shift_speed = 0
         self.first_sprite = None
         self.last_sprite = None
         self.show_menu = show_menu
@@ -28,11 +28,15 @@ class Level:
         self.coins_indicator = CoinsIndicator(self.display_surface)
         self.is_paused = False
 
-        # Particle effects
-        self.particle_effects = pygame.sprite.Group()
+        tmp_layout = import_csv_layout(level_data['player'])
+        self.level_rect = pygame.Rect(
+            0, 0, len(tmp_layout[0]) * TILE_SIZE, len(tmp_layout) * TILE_SIZE
+        )
 
         self.setup_level()
-        self.change_view('player')
+
+        # Particle effects
+        self.particle_effects = CameraGroup(self.player_group.sprites()[0], self.level_rect)
     
         # Audio
         self.soundeffects = {
@@ -62,6 +66,12 @@ class Level:
         self.water = Water(35, world_width)
         self.clouds = Clouds(9, world_width, 20)
 
+        # Setup UI
+        self.setup_ui()
+
+        player_layout = import_csv_layout(self.level_data['player'])
+        self.player_group = self.setup_player(player_layout)
+    
         bg_palms_layout = import_csv_layout(self.level_data['bg_palms'])
         self.world_sprites['bg_palms'] = self.create_tile_group(bg_palms_layout, 'bg_palms')
 
@@ -95,12 +105,6 @@ class Level:
         fg_palms_layout = import_csv_layout(self.level_data['fg_palms'])
         self.world_sprites['fg_palms'] = self.create_tile_group(fg_palms_layout, 'fg_palms')
 
-        # Setup UI
-        self.setup_ui()
-
-        player_layout = import_csv_layout(self.level_data['player'])
-        self.player, self.goal = self.setup_player(player_layout)
-    
     def setup_ui(self):
         self.health_bar = pygame.sprite.GroupSingle(
             HealthBar(self.stats.health, self.stats.max_health, self.display_surface)
@@ -108,8 +112,8 @@ class Level:
      
     def setup_player(self, layout):
 
-        player_grp = pygame.sprite.GroupSingle()
-        goal_grp = pygame.sprite.GroupSingle()
+        player_sprite = None
+        flag_sprite = None
 
         for i, row in enumerate(layout):
             for j, cell in enumerate(row):
@@ -121,17 +125,16 @@ class Level:
                             'jump': self.create_jump_animation,
                             'land': self.create_land_animation
                         }
-                        sprite = Player((x, y), self.health_bar, self.display_surface, player_animations)
-                        player_grp.add(sprite)
+                        player_sprite = Player((x, y), self.health_bar, self.display_surface, player_animations)
                     else:
-                        sprite = FlagTile((x, y))
-                        goal_grp.add(sprite)
-        
-        return player_grp, goal_grp
+                        flag_sprite = FlagTile((x, y))
+        player_grp = CameraGroup(player_sprite, self.level_rect)
+        player_grp.add(player_sprite, flag_sprite)
+        return player_grp
     
     def create_tile_group(self, layout, layout_type):
 
-        sprite_group = pygame.sprite.Group()
+        sprite_group = CameraGroup(self.player_group.sprites()[0], self.level_rect)
         for i, row in enumerate(layout):
             for j, cell in enumerate(row):
                 cell = int(cell)
@@ -183,69 +186,22 @@ class Level:
         explosion_particle_sprite = ParticleEffect(pos, ParticleEffectType.EXPLOSION)
         self.particle_effects.add(explosion_particle_sprite)
     
-    def change_view(self, target):
-        if target == "player":
-            player_rect = self.player.sprite.rect
-            while player_rect.centerx != SCREEN_WIDTH // 2:
-                if player_rect.centerx > SCREEN_WIDTH // 2:
-                    self.move_camera((-1, 0))
-                else:
-                    self.move_camera((1, 0))
-                self.draw()
-    
-    def move_camera(self, shift):
-        """ Manually moves the camera by a specific value(x, y)"""
-
-        # Move world objects (Terrain, coins, palms, ...)
-        for sprites in self.world_sprites.values():
-            for tile in sprites.sprites():
-                tile.update(shift[0])
-        
-        # Move the enemies
-        for enemy in self.enemies.sprites():
-            enemy.rect.x += shift[0]
-            enemy.rect.y += shift[1]
-
-        # Move the player
-        self.player.sprite.rect.x += shift[0]
-        self.player.sprite.rect.y += shift[1]
-
-        # Move the goal
-        self.goal.sprite.rect.x += shift[0]
-        self.goal.sprite.rect.y += shift[1]
-    
-    def update_shift_speed(self):
-        player = self.player.sprite
-        player_rect = player.rect
-        player_direction = player.direction
-        player_h_speed = player.h_speed
-
-        if player_rect.centerx > RIGHT_CAMERA_BORDER and player_direction.x > 0:
-            self.shift_speed = -player_h_speed * player_direction.x
-            player.can_move_right = False
-        elif player_rect.centerx < LEFT_CAMERA_BORDER and player_direction.x < 0:
-            self.shift_speed = -player_h_speed * player_direction.x
-            player.can_move_left = False
-        else:
-            self.shift_speed = 0
-    
     def draw(self):
 
         self.sky.draw(self.display_surface)
-        self.clouds.draw(self.display_surface, self.shift_speed)
+        self.clouds.draw(self.display_surface)
 
-        self.water.draw(self.display_surface, self.shift_speed)
+        self.water.draw(self.display_surface)
 
         for type, sprites in self.world_sprites.items():
             if type not in ['enemies_constraints']:
-                sprites.draw(self.display_surface)
+                sprites.draw()
         
-        self.enemies.draw(self.display_surface)
+        self.enemies.draw()
 
-        self.player.sprite.draw(self.display_surface)
-        self.goal.draw(self.display_surface)
+        self.player_group.draw()
 
-        self.particle_effects.draw(self.display_surface)
+        self.particle_effects.draw()
 
         self.health_bar.sprite.draw()
         self.coins_indicator.draw()
@@ -259,8 +215,8 @@ class Level:
         for enemy in self.enemies.sprites():
             draw_outline(self.display_surface, enemy)
 
-        draw_outline(self.display_surface, self.player.sprite)
-        draw_outline(self.display_surface, self.goal.sprite)
+        draw_outline(self.display_surface, self.player_group.sprites()[0])
+        draw_outline(self.display_surface, self.player_group.sprites()[1])
     
     def display_menu(self, is_completed):
         next_level = self.next_level if is_completed else self.stats.current_level
@@ -271,60 +227,60 @@ class Level:
     def kill_enemy(self, enemy):
         enemy.kill()
         self.create_explosion_animation(enemy.rect.center)
-        self.player.sprite.direction.y = -15
+        self.player_group.sprites()[0].direction.y = -15
     
     def check_if_completed(self):
         """Checks if the player reached the goal."""
-        if pygame.sprite.collide_rect(self.player.sprite, self.goal.sprite):
+        if pygame.sprite.collide_rect(self.player_group.sprites()[0], self.player_group.sprites()[1]):
             self.pause()
             self.display_menu(True)
         
     def check_if_player_is_dead(self):
         """Checks if the player is dead."""
         if (
-            self.player.sprite.rect.bottom > SCREEN_HEIGHT or
-            self.player.sprite.health_bar.sprite.current_health <= 0
+            self.player_group.sprites()[0].rect.bottom > SCREEN_HEIGHT or
+            self.player_group.sprites()[0].health_bar.sprite.current_health <= 0
         ):
             self.pause()
             self.display_menu(False)
     
     def check_spike_collision(self):
         for spike in self.world_sprites['spikes'].sprites():
-            if self.player.sprite.rect.colliderect(spike.collide_rect):
-                self.player.sprite.take_damage(spike.damage)
-                self.player.sprite.direction.x *= -1
-                self.player.sprite.direction.y = -12
+            if self.player_group.sprites()[0].rect.colliderect(spike.collide_rect):
+                self.player_group.sprites()[0].take_damage(spike.damage)
+                self.player_group.sprites()[0].direction.x *= -1
+                self.player_group.sprites()[0].direction.y = -12
     
     def check_enemy_collision(self):
         for enemy in self.enemies.sprites():
-            if self.player.sprite.rect.colliderect(enemy.rect):
-                player_rect = self.player.sprite.rect
+            if self.player_group.sprites()[0].rect.colliderect(enemy.rect):
+                player_rect = self.player_group.sprites()[0].rect
                 enemy_rect = enemy.rect
-                if self.player.sprite.direction.x > 0 or enemy.direction.x < 0:
-                    if self.player.sprite.direction.y == 0 or (
+                if self.player_group.sprites()[0].direction.x > 0 or enemy.direction.x < 0:
+                    if self.player_group.sprites()[0].direction.y == 0 or (
                         abs(player_rect.right - enemy_rect.left) < abs(player_rect.bottom - enemy_rect.top)
                     ):
-                        self.player.sprite.take_damage(enemy.damage)
-                    elif self.player.sprite.direction.y < 0:
-                        self.player.sprite.take_damage(enemy.damage)
+                        self.player_group.sprites()[0].take_damage(enemy.damage)
+                    elif self.player_group.sprites()[0].direction.y < 0:
+                        self.player_group.sprites()[0].take_damage(enemy.damage)
                     else:
                         self.kill_enemy(enemy)
                         self.play_soundeffect('stomp')
-                elif self.player.sprite.direction.x < 0 or enemy.direction.x > 0:
-                    if self.player.sprite.direction.y == 0 or (
+                elif self.player_group.sprites()[0].direction.x < 0 or enemy.direction.x > 0:
+                    if self.player_group.sprites()[0].direction.y == 0 or (
                         abs(enemy_rect.right - player_rect.left) < abs(player_rect.bottom - enemy_rect.top)
                     ):
-                        self.player.sprite.take_damage(enemy.damage)
-                    elif self.player.sprite.direction.y < 0:
-                        self.player.sprite.take_damage(enemy.damage)
+                        self.player_group.sprites()[0].take_damage(enemy.damage)
+                    elif self.player_group.sprites()[0].direction.y < 0:
+                        self.player_group.sprites()[0].take_damage(enemy.damage)
                     else:
                         self.kill_enemy(enemy)
                         self.play_soundeffect('stomp')
     
     def check_coin_collision(self):
         for coin in self.world_sprites['coins'].sprites():
-            if self.player.sprite.rect.colliderect(coin.rect):
-                self.player.sprite.collect_coin(coin.type)
+            if self.player_group.sprites()[0].rect.colliderect(coin.rect):
+                self.player_group.sprites()[0].collect_coin(coin.type)
                 self.coins_indicator.add_coin(coin.type)
                 self.play_soundeffect('collect_coin')
                 self.create_coin_collect_animation(coin.rect.center)
@@ -334,7 +290,6 @@ class Level:
         self.stats.gold_coins = self.coins_indicator.gold_coins
         self.stats.silver_coins = self.coins_indicator.silver_coins
         self.is_paused = True
-        self.shift_speed = 0
     
     def run(self):
 
@@ -348,19 +303,18 @@ class Level:
             return
 
         # Player sprite
-        self.player.update(self.world_sprites)
-        self.goal.update(self.shift_speed)
+        self.player_group.sprites()[0].update(self.world_sprites)
+        self.player_group.sprites()[1].update()
 
         # Enemies spries
-        self.enemies.update(self.world_sprites['enemies_constraints'], self.shift_speed)
+        self.enemies.update(self.world_sprites['enemies_constraints'])
 
         # Particles
-        self.particle_effects.update(self.shift_speed)
+        self.particle_effects.update()
 
         # Level tiles
-        self.update_shift_speed()
         for sprites in self.world_sprites.values():
-            sprites.update(self.shift_speed)
+            sprites.update()
 
         self.check_spike_collision()
         self.check_enemy_collision()

@@ -6,7 +6,7 @@ from tools import debug
 from game import Game
 
 
-if __name__ == "__main__":
+def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Red nose adventures")
@@ -14,11 +14,9 @@ if __name__ == "__main__":
     game  = Game(screen)
 
     while True:
-        for event in pygame.event.get(pygame.QUIT):
+        for _ in pygame.event.get(pygame.QUIT):
             pygame.quit()
             sys.exit()
-        
-        screen.fill('#000000')
         
         game.run()
 
@@ -27,9 +25,9 @@ if __name__ == "__main__":
             debug(debug_infos, screen)
         
         pygame.display.update()
+        debug.reset()
         clock.tick(FPS)
 
 
-
-
-
+if __name__ == "__main__":
+    main()

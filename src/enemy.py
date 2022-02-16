@@ -44,8 +44,8 @@ class Enemy(pygame.sprite.Sprite):
                     self.rect.left = tile.rect.right
                 self.direction.x *= -1
 
-    def update(self, constraint_tiles, x_shift):
-        self.rect.x += self.direction.x + x_shift
+    def update(self, constraint_tiles):
+        self.rect.x += self.direction.x
         self.check_for_collisions(constraint_tiles)
         self.animate()
 

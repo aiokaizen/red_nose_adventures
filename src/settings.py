@@ -44,8 +44,12 @@ VERTICAL_ROWS = 11
 SCREEN_HEIGHT = TILE_SIZE * VERTICAL_ROWS
 
 # Camera settings
-LEFT_CAMERA_BORDER = SCREEN_WIDTH / 4
-RIGHT_CAMERA_BORDER = SCREEN_WIDTH - LEFT_CAMERA_BORDER
+CAMERA_BORDERS = {
+    'left': 400,
+    'right': 400,
+    'top': 100,
+    'bottom': 200,
+}
 
 # Time related settings
 FPS = 60
