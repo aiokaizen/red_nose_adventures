@@ -78,7 +78,8 @@ class CameraGroup(pygame.sprite.Group):
 
         for spr in sprites:
             offset_pos = spr.rect.topleft - self.offset
-            # if hasattr(spr, 'draw'):
-            #     spr.draw(offset_pos)
-            # else:
-            self.spritedict[spr] = surface.blit(spr.image, offset_pos)
+            offset_rect = pygame.Rect(spr.rect).move(-self.offset)
+            if hasattr(spr, 'draw'):
+                spr.draw(offset_rect)
+            else:
+                self.spritedict[spr] = surface.blit(spr.image, offset_pos)

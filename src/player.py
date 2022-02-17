@@ -3,7 +3,7 @@ from os import path
 from math import sin
 
 import pygame
-from pygame.math import Vector2 as vec2
+from pygame.math import Vector2 as vec
 
 from settings import *
 from tools import Direction, PlayerState, ParticleEffectType, debug, import_folder
@@ -20,6 +20,8 @@ class Player(pygame.sprite.Sprite):
         self.particles_frame_index = 0
         self.particles_animation_speed = ANIMATION_FPS
         self.display_surface = surface
+        self.particle_effect: pygame.Surface = pygame.Surface((0, 0))
+        self.particle_effect_rect: pygame.Rect = self.particle_effect.get_rect(topleft=(0, 0))
 
         # Animation settings
         self.import_character_assets()
@@ -116,26 +118,29 @@ class Player(pygame.sprite.Sprite):
             self.image = image if self.is_facing_right else pygame.transform.flip(image, True, False)
   
     def animate_particles(self):
-        if self.state == PlayerState.RUN:
-            # Get the correct animation
-            animation = self.particles_animations[ParticleEffectType.RUN]
+        if self.state != PlayerState.RUN:
+            return
 
-            # Get next frame
-            animation_speed = self.particles_animation_speed / FPS
-            self.particles_frame_index += animation_speed
-            if self.particles_frame_index >= len(animation):
-                self.particles_frame_index = 0
-            
-            # Animate the particles
-            particle: pygame.Surface = animation[int(self.particles_frame_index)]
+        # Get the correct animation
+        animation = self.particles_animations[ParticleEffectType.RUN]
 
-            if self.is_facing_right:
-                particle_pos = self.rect.bottomleft - vec2(particle.get_width(), particle.get_height())
-                self.display_surface.blit(particle, particle_pos)
-            else:
-                particle_pos = self.rect.bottomright + vec2(particle.get_width(), -particle.get_height())
-                flipped_particle = pygame.transform.flip(particle, True, False)
-                self.display_surface.blit(flipped_particle, particle_pos)
+        # Get next frame
+        animation_speed = self.particles_animation_speed / FPS
+        self.particles_frame_index += animation_speed
+        if self.particles_frame_index >= len(animation):
+            self.particles_frame_index = 0
+        
+        # Animate the particles
+        self.particle_effect: pygame.Surface = animation[int(self.particles_frame_index)]
+        self.particle_effect_rect: pygame.Rect = pygame.Rect(
+            0, 0, self.particle_effect.get_width(), self.particle_effect.get_height()
+        )
+
+        if self.is_facing_right:
+            self.particle_effect_rect.topleft = vec(self.rect.bottomleft) - vec(self.particle_effect_rect.size)
+        else:
+            self.particle_effect = pygame.transform.flip(self.particle_effect, True, False)
+            self.particle_effect_rect.topleft = vec(self.rect.bottomright) - vec(0, self.particle_effect_rect.height)
 
     def get_input(self):
         keys = pygame.key.get_pressed()
@@ -173,7 +178,7 @@ class Player(pygame.sprite.Sprite):
             self.direction.y = self.jump_height
             self.rect.y += self.direction.y
             self.is_airborn = True
-            self.animation_functions['jump'](self.rect.midbottom + vec2(0, 9))
+            self.animation_functions['jump'](self.rect.midbottom + vec(0, 9))
             self.jumps_left = self.jumps_left -1 if self.can_double_jump else 0
             self.play_soundeffect('jump')
     
@@ -250,7 +255,7 @@ class Player(pygame.sprite.Sprite):
     def update_state(self):
         if self.direction.y == 0 and self.state == PlayerState.FALL:
             self.state = PlayerState.LAND
-            self.animation_functions['land'](self.rect.midbottom + vec2(0, -18))
+            self.animation_functions['land'](self.rect.midbottom + vec(0, -18))
         elif self.direction.x == 0 and self.direction.y == 0:
             self.state = PlayerState.IDLE
         elif self.direction.y < 0:
@@ -316,15 +321,20 @@ class Player(pygame.sprite.Sprite):
         elif type == 'silver':
             self.silver_coins += 1
 
-    def draw(self):
-
+    def draw(self, new_rect=None):
+        
+        rect = new_rect if new_rect else self.rect
+        offset = vec(self.rect.topleft) - vec(new_rect.topleft)
+        particle_pos = vec(self.particle_effect_rect.topleft) - offset
         if self.is_facing_right or self.state == PlayerState.JUMP:
-            pos = (self.rect.left, self.rect.bottom - self.image.get_height())
+            pos = (rect.left, rect.bottom - self.image.get_height())
         else:
-            pos = (self.rect.left + self.image.get_width() - 100, self.rect.bottom - self.image.get_height())
+            pos = (rect.left + self.image.get_width() - 100, rect.bottom - self.image.get_height())
         opacity = (1 + sin(self.get_invincibility_remaining_duration())) * 256 / 2 if self.is_invincible else 255
         self.image.set_alpha(opacity)
         self.display_surface.blit(self.image, pos)
+        if self.state == PlayerState.RUN:
+            self.display_surface.blit(self.particle_effect, particle_pos)
 
 class HatTile(Tile):
 
