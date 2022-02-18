@@ -1,7 +1,7 @@
 import pygame
 from camera import CameraGroup
 from tile import *
-from player import HatTile, Player
+from player import Player
 from settings import *
 from particles import ParticleEffect
 from tools import (
@@ -137,7 +137,7 @@ class Level:
                         }
                         self.player = Player(
                             (x, y),
-                            [self.visible_sprites, self.active_sprites],
+                            [self.active_sprites],
                             self.collision_sprites,
                             self.health_bar, self.display_surface, player_animations
                         )
@@ -145,6 +145,9 @@ class Level:
                         self.target = FlagTile(
                             (x, y), [self.visible_sprites, self.active_sprites]
                         )
+        # Adding player to visible sprites late to show it on top
+        # of the target sprite
+        self.visible_sprites.add(self.player)
     
     def create_sprites_from_layout(self, layout, layout_type, groups):
 
@@ -233,6 +236,7 @@ class Level:
         if pygame.sprite.collide_rect(self.player, self.target):
             self.prepare_to_pause()
             self.level_completed = True
+            self.player.set_level_completed()
             self.target.start_transition()
         
     def check_if_player_is_dead(self):

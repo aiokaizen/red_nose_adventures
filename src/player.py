@@ -50,6 +50,7 @@ class Player(pygame.sprite.Sprite):
         # The bug makes the character jump to the top of the wall
         self.h_collision_x = 0 
         self.is_dead = False
+        self.level_completed = False
 
         # Horizontal Movement
         self.direction = pygame.math.Vector2(0, 0)
@@ -77,6 +78,10 @@ class Player(pygame.sprite.Sprite):
             'hit': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'hit.wav')),
             'jump': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'jump.wav')),
         }
+    
+    def set_level_completed(self):
+        self.state = PlayerState.IDLE
+        self.level_completed = True
     
     def play_soundeffect(self, soundeffect, volume=0.05):
         sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
@@ -309,8 +314,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self):
 
-        # Get input
-        if self.is_dead:
+        if self.is_dead or self.level_completed:
             self.reset_buffs()
             self.apply_gravity()
             self.check_for_vertical_collisions()
@@ -318,6 +322,7 @@ class Player(pygame.sprite.Sprite):
             self.animate_particles()
             return
 
+        # Get input
         self.get_input()
         self.run()
 
