@@ -11,7 +11,7 @@ class Node(AnimatedTile):
 
     def __init__(self, pos, level, status):
         animation_path = path.join(BASE_DIR, 'graphics', 'overworld', f"{level - 1}")
-        super().__init__(pos, [animation_path])
+        super().__init__(pos, [], [animation_path])
         self.status = status
         self.level = level
         self.rect = self.image.get_rect(center=pos)
@@ -48,10 +48,10 @@ class Hat(pygame.sprite.Sprite):
 
 class Overworld:
 
-    def __init__(self, stats, surface, create_level, navigate_to=-1):
+    def __init__(self, stats, create_level, navigate_to=-1):
 
         # setup
-        self.display_surface = surface
+        self.display_surface = pygame.display.get_surface()
         self.create_level = create_level
         self.player_stats = stats
         self.hat = pygame.sprite.GroupSingle()

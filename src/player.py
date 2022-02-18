@@ -12,8 +12,8 @@ from tile import Tile
 
 class Player(pygame.sprite.Sprite):
 
-    def __init__(self, pos, health_bar, surface: pygame.Surface, animation_functions: dict):
-        super().__init__()
+    def __init__(self, pos, groups, collision_sprites, health_bar, surface: pygame.Surface, animation_functions: dict):
+        super().__init__(groups)
 
         # Dust particles animation
         self.import_particles_assets()
@@ -29,10 +29,12 @@ class Player(pygame.sprite.Sprite):
         self.animation_functions = animation_functions
         self.frame_index = 0
         self.animation_speed = ANIMATION_FPS
+        self.is_animating = True
         self.image = self.animations[self.state][self.frame_index]
         self.rect = pygame.Rect(pos, [50, self.image.get_height()])
         
         self.collidable = pygame.Surface((self.rect.width, self.rect.height))
+        self.collision_sprites = collision_sprites
         
         # Player stats
         self.health_bar = health_bar
@@ -47,6 +49,7 @@ class Player(pygame.sprite.Sprite):
         # This was declared to fix a bug when vertically colliding with a wall
         # The bug makes the character jump to the top of the wall
         self.h_collision_x = 0 
+        self.is_dead = False
 
         # Horizontal Movement
         self.direction = pygame.math.Vector2(0, 0)
@@ -87,7 +90,8 @@ class Player(pygame.sprite.Sprite):
             PlayerState.RUN: [],
             PlayerState.JUMP: [],
             PlayerState.FALL: [],
-            PlayerState.AIRBORN: [],
+            PlayerState.DEAD_HIT: [],
+            PlayerState.DEAD_GROUND: [],
             PlayerState.AIRBORN_TOUCH_WALL: [],
         }
         character_assets_dir = BASE_DIR + '/graphics/character/'
@@ -98,8 +102,8 @@ class Player(pygame.sprite.Sprite):
     def import_particles_assets(self):
         self.particles_animations = {
             ParticleEffectType.RUN: [],
-            ParticleEffectType.JUMP: [],
-            ParticleEffectType.LAND: [],
+            # ParticleEffectType.JUMP: [],
+            # ParticleEffectType.LAND: [],
         }
         character_assets_dir = BASE_DIR + '/graphics/character/dust_particles/'
         for animation in self.particles_animations.keys():
@@ -107,15 +111,22 @@ class Player(pygame.sprite.Sprite):
             self.particles_animations[animation] = import_folder(animation_path)
     
     def animate(self):
-        if not self.state == PlayerState.LAND:
-            animation = self.animations[self.state]
-            animation_speed = self.animation_speed / FPS
-            self.frame_index += animation_speed
-            if self.frame_index >= len(animation):
-                self.frame_index = 0
+        if self.state == PlayerState.LAND or not self.is_animating:
+            return
 
-            image = animation[int(self.frame_index)]
-            self.image = image if self.is_facing_right else pygame.transform.flip(image, True, False)
+        animation = self.animations[self.state]
+        animation_speed = self.animation_speed / FPS
+        self.frame_index += animation_speed
+        if self.frame_index >= len(animation):
+            self.frame_index = 0
+            if self.state == PlayerState.DEAD_HIT:
+                self.state = PlayerState.DEAD_GROUND
+            elif self.state == PlayerState.DEAD_GROUND:
+                self.is_animating = False
+                return
+
+        image = animation[int(self.frame_index)]
+        self.image = image if self.is_facing_right else pygame.transform.flip(image, True, False)
   
     def animate_particles(self):
         if self.state != PlayerState.RUN:
@@ -162,12 +173,16 @@ class Player(pygame.sprite.Sprite):
                 if not self.can_move_right:
                     self.can_move_right = True
                 self.direction.x = -1
-                self.is_facing_right = False
+                if self.is_facing_right:
+                    self.is_facing_right = False
+                    self.frame_index = 0
             elif direction == Direction.RIGHT:
                 if not self.can_move_left:
                     self.can_move_left = True
                 self.direction.x = 1
-                self.is_facing_right = True
+                if not self.is_facing_right:
+                    self.frame_index = 0
+                    self.is_facing_right = True
     
     def jump(self):
         if (
@@ -180,42 +195,41 @@ class Player(pygame.sprite.Sprite):
             self.is_airborn = True
             self.animation_functions['jump'](self.rect.midbottom + vec(0, 9))
             self.jumps_left = self.jumps_left -1 if self.can_double_jump else 0
+            self.frame_index = 0
             self.play_soundeffect('jump')
     
     def apply_gravity(self):
         self.direction.y += self.gravity
         self.rect.y += self.direction.y
     
-    def check_for_horizontal_collisions(self, tile_group_list):
+    def check_for_horizontal_collisions(self):
         collision_detected = False
-
-        for tiles in tile_group_list:
-            for tile in tiles.sprites():
-                if tile.rect.colliderect(self.rect):
-                    if self.direction.x > 0:
-                        if self.direction.y == 0 or (
-                            abs(self.rect.right - tile.rect.left) < min(
-                                abs(tile.rect.bottom - self.rect.top),
-                                abs(self.rect.bottom - tile.rect.top)
-                            )
-                        ):
-                            self.rect.right = tile.rect.left
-                            self.touching_right_wall = True
-                            self.h_collision_x = self.rect.right
-                            collision_detected = True
-                            break
-                    elif self.direction.x < 0:
-                        if self.direction.y == 0 or (
-                            abs(tile.rect.right - self.rect.left) < min(
-                                abs(tile.rect.bottom - self.rect.top),
-                                abs(self.rect.bottom - tile.rect.top)
-                            )
-                        ):
-                            self.rect.left = tile.rect.right
-                            self.touching_left_wall = True
-                            self.h_collision_x = self.rect.left
-                            collision_detected = True
-                            break
+        for sprite in self.collision_sprites.sprites():
+            if sprite.rect.colliderect(self.rect):
+                if self.direction.x > 0:
+                    if self.direction.y == 0 or (
+                        abs(self.rect.right - sprite.rect.left) < min(
+                            abs(sprite.rect.bottom - self.rect.top),
+                            abs(self.rect.bottom - sprite.rect.top)
+                        )
+                    ):
+                        self.rect.right = sprite.rect.left
+                        self.touching_right_wall = True
+                        self.h_collision_x = self.rect.right
+                        collision_detected = True
+                        break
+                elif self.direction.x < 0:
+                    if self.direction.y == 0 or (
+                        abs(sprite.rect.right - self.rect.left) < min(
+                            abs(sprite.rect.bottom - self.rect.top),
+                            abs(self.rect.bottom - sprite.rect.top)
+                        )
+                    ):
+                        self.rect.left = sprite.rect.right
+                        self.touching_left_wall = True
+                        self.h_collision_x = self.rect.left
+                        collision_detected = True
+                        break
                 if collision_detected:
                     break
 
@@ -232,22 +246,21 @@ class Player(pygame.sprite.Sprite):
         ):
             self.touching_right_wall = False
         
-    def check_for_vertical_collisions(self, tile_group_list):
+    def check_for_vertical_collisions(self):
         self.touching_ground = False
         self.touching_ceiling = False
 
-        for tiles in tile_group_list:
-            for tile in tiles.sprites():
-                if tile.rect.colliderect(self.rect):
-                    if self.direction.y > 0:
-                        self.rect.bottom = tile.rect.top
-                        self.is_airborn = False
-                        self.init_jump_count()
-                        self.touching_ground = True
-                    elif self.direction.y < 0:
-                        self.rect.top = tile.rect.bottom
-                        self.touching_ceiling = True
-                    self.direction.y = 0
+        for sprite in self.collision_sprites:
+            if sprite.rect.colliderect(self.rect):
+                if self.direction.y > 0:
+                    self.rect.bottom = sprite.rect.top
+                    self.is_airborn = False
+                    self.init_jump_count()
+                    self.touching_ground = True
+                elif self.direction.y < 0:
+                    self.rect.top = sprite.rect.bottom
+                    self.touching_ceiling = True
+                self.direction.y = 0
     
     def init_jump_count(self):
         self.jumps_left = 2
@@ -255,6 +268,7 @@ class Player(pygame.sprite.Sprite):
     def update_state(self):
         if self.direction.y == 0 and self.state == PlayerState.FALL:
             self.state = PlayerState.LAND
+            self.frame_index = 0
             self.animation_functions['land'](self.rect.midbottom + vec(0, -18))
         elif self.direction.x == 0 and self.direction.y == 0:
             self.state = PlayerState.IDLE
@@ -277,6 +291,10 @@ class Player(pygame.sprite.Sprite):
             self.invincibility_start_time = pygame.time.get_ticks()
             self.invincibility_duration = self.invincibility_after_damage
             self.play_soundeffect('hit')
+            if self.health_bar.sprite.current_health <= 0:
+                self.state = PlayerState.DEAD_HIT
+                self.is_dead = True
+                self.frame_index = 0
     
     def heal(self, value):
         self.health_bar.sprite.heal(value)
@@ -284,12 +302,23 @@ class Player(pygame.sprite.Sprite):
     def get_invincibility_remaining_duration(self):
         current_time = pygame.time.get_ticks()
         return current_time - self.invincibility_start_time 
+    
+    def reset_buffs(self):
+        self.is_invincible = False
+        self.invincibility_start_time = -1
 
-    def update(self, tiles_dict):
+    def update(self):
 
         # Get input
-        self.get_input()
+        if self.is_dead:
+            self.reset_buffs()
+            self.apply_gravity()
+            self.check_for_vertical_collisions()
+            self.animate()
+            self.animate_particles()
+            return
 
+        self.get_input()
         self.run()
 
         # Update stats
@@ -299,16 +328,12 @@ class Player(pygame.sprite.Sprite):
                 self.is_invincible = False
                 self.invincibility_start_time = -1
 
-        # Collisions
-        collidable_tiles = [
-            tiles_dict['terrain'], tiles_dict['fg_palms']
-        ]
         # Horizontal collisions
-        self.check_for_horizontal_collisions(collidable_tiles)
+        self.check_for_horizontal_collisions()
         
         self.apply_gravity()
         # Vertical collisions
-        self.check_for_vertical_collisions(collidable_tiles)
+        self.check_for_vertical_collisions()
         
         # Animations
         self.update_state()
@@ -325,8 +350,10 @@ class Player(pygame.sprite.Sprite):
         
         rect = new_rect if new_rect else self.rect
         offset = vec(self.rect.topleft) - vec(new_rect.topleft)
+        if self.is_dead:
+            rect.top += 5
         particle_pos = vec(self.particle_effect_rect.topleft) - offset
-        if self.is_facing_right or self.state == PlayerState.JUMP:
+        if self.is_facing_right or self.state in [PlayerState.JUMP, PlayerState.DEAD_HIT, PlayerState.DEAD_GROUND]:
             pos = (rect.left, rect.bottom - self.image.get_height())
         else:
             pos = (rect.left + self.image.get_width() - 100, rect.bottom - self.image.get_height())
@@ -338,8 +365,8 @@ class Player(pygame.sprite.Sprite):
 
 class HatTile(Tile):
 
-    def __init__(self, pos):
-        super().__init__(pos)
+    def __init__(self, pos, groups):
+        super().__init__(pos, groups)
         self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "character", "hat.png")).convert_alpha()
         pos = (
             pos[0] + int(TILE_SIZE / 2) - (self.image.get_width() / 2),

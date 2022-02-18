@@ -7,12 +7,12 @@ from tools import debug
 
 class CameraGroup(pygame.sprite.Group):
 
-    def __init__(self, player, level_rect, sprites=[]):
+    def __init__(self, level_rect, target=None, sprites=[]):
         super().__init__(sprites)
         self.display_surface = pygame.display.get_surface()
-        self.player = player
         self.offset = vec(0, 0)
         self.lvl_rect = level_rect
+        self.target: pygame.sprite.Sprite = target
         borders = CAMERA_BORDERS
         self.camera_rect = pygame.Rect(
             borders['left'], borders['top'],
@@ -25,6 +25,9 @@ class CameraGroup(pygame.sprite.Group):
             pygame.display.get_window_size(),
         )
     
+    def set_target(self, target: pygame.sprite.Sprite):
+        self.target = target
+    
     def update_view(self):
         self.view.topleft = self.position - (CAMERA_BORDERS['left'], CAMERA_BORDERS['top'])
 
@@ -33,32 +36,32 @@ class CameraGroup(pygame.sprite.Group):
         surface = self.display_surface
 
         # Horizontal movement
-        if self.player.rect.left < self.camera_rect.left:
-            self.position.x += self.player.rect.left - self.camera_rect.left
-            self.camera_rect.left = self.player.rect.left
+        if self.target.rect.left < self.camera_rect.left:
+            self.position.x += self.target.rect.left - self.camera_rect.left
+            self.camera_rect.left = self.target.rect.left
             self.update_view()
             if self.view.left < self.lvl_rect.left:
                 self.camera_rect.left = self.lvl_rect.left + CAMERA_BORDERS['left']
                 self.position.x = self.lvl_rect.left + CAMERA_BORDERS['left']
-        elif self.player.rect.right > self.camera_rect.right:
-            self.position.x += self.player.rect.right - self.camera_rect.right
-            self.camera_rect.right = self.player.rect.right
+        elif self.target.rect.right > self.camera_rect.right:
+            self.position.x += self.target.rect.right - self.camera_rect.right
+            self.camera_rect.right = self.target.rect.right
             self.update_view()
             if self.view.right > self.lvl_rect.right:
                 self.camera_rect.right = self.lvl_rect.right - CAMERA_BORDERS['right']
                 self.position.x = self.lvl_rect.right - self.camera_rect.width - CAMERA_BORDERS['right']
         
         # Vertical movement
-        if self.player.rect.top < self.camera_rect.top:
-            self.position.y += self.player.rect.top - self.camera_rect.top
-            self.camera_rect.top = self.player.rect.top
+        if self.target.rect.top < self.camera_rect.top:
+            self.position.y += self.target.rect.top - self.camera_rect.top
+            self.camera_rect.top = self.target.rect.top
             self.update_view()
             if self.view.top < self.lvl_rect.top - 200:
                 self.camera_rect.top = self.lvl_rect.top - 200 + CAMERA_BORDERS['top']
                 self.position.y = self.lvl_rect.top - 200 + CAMERA_BORDERS['top']
-        elif self.player.rect.bottom > self.camera_rect.bottom:
-            self.position.y += self.player.rect.bottom - self.camera_rect.bottom
-            self.camera_rect.bottom = self.player.rect.bottom
+        elif self.target.rect.bottom > self.camera_rect.bottom:
+            self.position.y += self.target.rect.bottom - self.camera_rect.bottom
+            self.camera_rect.bottom = self.target.rect.bottom
             self.update_view()
             if self.view.bottom > self.lvl_rect.bottom:
                 self.camera_rect.bottom = self.lvl_rect.bottom - CAMERA_BORDERS['bottom']

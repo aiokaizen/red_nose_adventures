@@ -29,7 +29,8 @@ class PlayerState(Enum):
     JUMP = "jump"
     FALL = "fall"
     LAND = "land"
-    AIRBORN = "airborn"  # Player is in the air (JUMPING or FALLING)
+    DEAD_HIT = "dead_hit"
+    DEAD_GROUND = "dead_ground"
     AIRBORN_TOUCH_WALL = "airborn_touch_wall"
 
     @classmethod
@@ -78,16 +79,16 @@ class Debug:
 debug = Debug()
 
 
-def load_player_stats(path=''):
+def load_player_data(path=''):
 
-    from stats import PlayerStats
+    from data import PlayerData
 
     if not path:
         path = os.path.join(SAVE_DIR, 'save.ar')
 
     if not os.path.exists(path) or not os.path.isfile(path):
         logging.warn("Loading failed. Invalid file path.")
-        return PlayerStats()
+        return PlayerData()
 
     with open(path, 'r') as file:
         try:
@@ -95,11 +96,11 @@ def load_player_stats(path=''):
             secret_key = SECRET_KEY
             key = fernet.Fernet(secret_key)
             json_stats = key.decrypt(stats)
-            player_stats = PlayerStats.from_dict(json.loads(json_stats))
+            player_stats = PlayerData.from_dict(json.loads(json_stats))
             return player_stats
         except Exception as e:
             logging.error(str(e))
-            return PlayerStats()
+            return PlayerData()
 
 
 def save_player_stats(player_stats):

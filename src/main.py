@@ -1,5 +1,8 @@
-import pygame
 import sys
+from datetime import datetime
+
+import pygame
+
 from settings import *
 from tools import debug
 
@@ -11,7 +14,7 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Red nose adventures")
     clock = pygame.time.Clock()
-    game  = Game(screen)
+    game  = Game()
 
     while True:
         for _ in pygame.event.get(pygame.QUIT):
@@ -22,7 +25,7 @@ def main():
 
         if DEBUG:
             debug_infos = 'DEBUG mode is ON...'
-            debug(debug_infos, screen)
+            debug.write(debug_infos, screen, (SCREEN_WIDTH - 300, 10))
         
         pygame.display.update()
         debug.reset()

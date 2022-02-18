@@ -10,8 +10,9 @@ from tools import import_folder
 
 class Enemy(pygame.sprite.Sprite):
 
-    def __init__(self, pos):
-        super().__init__()
+    def __init__(self, pos, groups, constraint_tiles_group):
+        super().__init__(groups)
+        self.constraint_tiles = constraint_tiles_group
         self.direction = vec(2, 0)
         self.damage = 25
         self.frame_index = 0
@@ -32,11 +33,11 @@ class Enemy(pygame.sprite.Sprite):
         # Choose next frame
         animation_speed = self.animation_speed / FPS
         self.frame_index += animation_speed
-        if self.frame_index > len(self.keyframes):
+        if self.frame_index >= len(self.keyframes):
             self.frame_index = 0
 
-    def check_for_collisions(self, constraint_tiles: pygame.sprite.Group):
-        for tile in constraint_tiles.sprites():
+    def check_for_collisions(self):
+        for tile in self.constraint_tiles.sprites():
             if tile.rect.colliderect(self.rect):
                 if self.direction.x > 0:
                     self.rect.right = tile.rect.left
@@ -44,16 +45,16 @@ class Enemy(pygame.sprite.Sprite):
                     self.rect.left = tile.rect.right
                 self.direction.x *= -1
 
-    def update(self, constraint_tiles):
+    def update(self):
         self.rect.x += self.direction.x
-        self.check_for_collisions(constraint_tiles)
+        self.check_for_collisions()
         self.animate()
 
 
 class EnemyConstraint(Tile):
 
-    def __init__(self, pos):
-        super().__init__(pos)
+    def __init__(self, pos, groups):
+        super().__init__(pos, groups)
         # self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
         # self.image.fill('red')
         # self.image.set_alpha(50)

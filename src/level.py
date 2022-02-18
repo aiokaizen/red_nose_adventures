@@ -16,27 +16,34 @@ from ui import CoinsIndicator, HealthBar
 
 class Level:
 
-    def __init__(self, stats, surface: pygame.Surface, show_menu):
+    def __init__(self, stats, show_menu):
         level_data = get_level_data(stats.current_level)
-        self.display_surface = surface
+        self.display_surface = pygame.display.get_surface()
         self.level_data = level_data
-        self.first_sprite = None
-        self.last_sprite = None
         self.show_menu = show_menu
         self.stats = stats
         self.next_level = self.stats.current_level + 1
         self.coins_indicator = CoinsIndicator(self.display_surface)
-        self.is_paused = False
-
+        self.is_input_disabled = False
+        self.level_completed = False
+        self.pause_timer_start = 0
+        self.pause_timer_duration = 2000
+        
         tmp_layout = import_csv_layout(level_data['player'])
         self.level_rect = pygame.Rect(
             0, 0, len(tmp_layout[0]) * TILE_SIZE, len(tmp_layout) * TILE_SIZE
         )
 
-        self.setup_level()
+        # Groups
+        self.visible_sprites = CameraGroup(self.level_rect)  # Visible sprites
+        self.active_sprites = pygame.sprite.Group()  # Updatable sprites
+        self.collision_sprites = pygame.sprite.Group()  # Collision sprites
+        self.collectible_sprites = pygame.sprite.Group()  # Collectibles like potions, coins, ...
+        self.invisible_sprites = pygame.sprite.Group()  # Invisible sprites (Hidden objects, and enemeies constraints)
+        self.enemies = pygame.sprite.Group()  # Collision sprites
+        # self.particle_effects = pygame.sprite.Group()  # Particle effects sprites
 
-        # Particle effects
-        self.particle_effects = CameraGroup(self.player_group.sprites()[0], self.level_rect)
+        self.setup_level()
     
         # Audio
         self.soundeffects = {
@@ -58,62 +65,65 @@ class Level:
  
     def setup_level(self):
 
-        self.world_sprites = {}
-        terrain_layout = import_csv_layout(self.level_data['terrain'])
-
-        self.sky = Sky(horizon=8)
-        world_width = len(terrain_layout[0]) * TILE_SIZE
-        self.water = Water(35, world_width)
-        self.clouds = Clouds(9, world_width, 20)
+        self.sky = Sky(horizon=5)
+        self.water = Water(35, self.level_rect.width)
+        self.clouds = Clouds(8, self.level_rect.width, 20)
 
         # Setup UI
         self.setup_ui()
 
-        player_layout = import_csv_layout(self.level_data['player'])
-        self.player_group = self.setup_player(player_layout)
-    
         bg_palms_layout = import_csv_layout(self.level_data['bg_palms'])
-        self.world_sprites['bg_palms'] = self.create_tile_group(bg_palms_layout, 'bg_palms')
+        self.create_sprites_from_layout(bg_palms_layout, 'bg_palms', [self.visible_sprites, self.active_sprites])
 
+        terrain_layout = import_csv_layout(self.level_data['terrain'])
         bg_terrain2_layout = import_csv_layout(self.level_data['bg_terrain'])
-        self.world_sprites['bg_terrain2'] = self.create_tile_group(bg_terrain2_layout, 'bg_terrain')
+        self.create_sprites_from_layout(bg_terrain2_layout, 'bg_terrain', [self.visible_sprites])
+
         bg_terrain_layout = update_layout_to_only_contain(terrain_layout, self.get_bg_terrain_tile_ids())
-        self.world_sprites['bg_terrain'] = self.create_tile_group(bg_terrain_layout, 'bg_terrain')
+        self.create_sprites_from_layout(bg_terrain_layout, 'bg_terrain', [self.visible_sprites])
+
         collidable_terrain_layout = update_layout_exclude(terrain_layout, self.get_bg_terrain_tile_ids())
-        self.world_sprites['terrain'] = self.create_tile_group(collidable_terrain_layout, 'terrain')
+        self.create_sprites_from_layout(collidable_terrain_layout, 'terrain', [self.visible_sprites, self.collision_sprites])
 
         crates_layout = import_csv_layout(self.level_data['crates'])
-        self.world_sprites['crates'] = self.create_tile_group(crates_layout, 'crates')
+        self.create_sprites_from_layout(crates_layout, 'crates', [self.visible_sprites])
 
         grass_layout = import_csv_layout(self.level_data['grass'])
-        self.world_sprites['grass'] = self.create_tile_group(grass_layout, 'grass')
+        self.create_sprites_from_layout(grass_layout, 'grass', [self.visible_sprites])
 
         coins_layout = import_csv_layout(self.level_data['coins'])
-        self.world_sprites['coins'] = self.create_tile_group(coins_layout, 'coins')
-
-        enemies_constraints_layout = import_csv_layout(self.level_data['enemies_constraints'])
-        self.world_sprites['enemies_constraints'] = self.create_tile_group(
-            enemies_constraints_layout, 'enemies_constraints'
-        )
+        self.create_sprites_from_layout(coins_layout, 'coins', [self.visible_sprites, self.active_sprites, self.collectible_sprites])
 
         spikes_layout = import_csv_layout(self.level_data['spikes'])
-        self.world_sprites['spikes'] = self.create_tile_group(spikes_layout, 'spikes')
+        self.create_sprites_from_layout(
+            spikes_layout, 'spikes', [self.visible_sprites, self.enemies]
+        )
+
+        enemies_constraints_layout = import_csv_layout(self.level_data['enemies_constraints'])
+        self.create_sprites_from_layout(
+            enemies_constraints_layout, 'enemies_constraints', [self.invisible_sprites]
+        )
 
         enemies_layout = import_csv_layout(self.level_data['enemies'])
-        self.enemies = self.create_tile_group(enemies_layout, 'enemies')
+        self.create_sprites_from_layout(
+            enemies_layout, 'enemies',
+            [self.visible_sprites, self.active_sprites, self.enemies]
+        )
 
         fg_palms_layout = import_csv_layout(self.level_data['fg_palms'])
-        self.world_sprites['fg_palms'] = self.create_tile_group(fg_palms_layout, 'fg_palms')
+        self.create_sprites_from_layout(fg_palms_layout, 'fg_palms', [self.visible_sprites, self.active_sprites, self.collision_sprites])
 
+        player_layout = import_csv_layout(self.level_data['player'])
+        self.setup_player(player_layout)
+
+        self.visible_sprites.set_target(self.player)
+    
     def setup_ui(self):
         self.health_bar = pygame.sprite.GroupSingle(
             HealthBar(self.stats.health, self.stats.max_health, self.display_surface)
         )
      
     def setup_player(self, layout):
-
-        player_sprite = None
-        flag_sprite = None
 
         for i, row in enumerate(layout):
             for j, cell in enumerate(row):
@@ -125,99 +135,88 @@ class Level:
                             'jump': self.create_jump_animation,
                             'land': self.create_land_animation
                         }
-                        player_sprite = Player((x, y), self.health_bar, self.display_surface, player_animations)
+                        self.player = Player(
+                            (x, y),
+                            [self.visible_sprites, self.active_sprites],
+                            self.collision_sprites,
+                            self.health_bar, self.display_surface, player_animations
+                        )
                     else:
-                        flag_sprite = FlagTile((x, y))
-        player_grp = CameraGroup(player_sprite, self.level_rect)
-        player_grp.add(player_sprite, flag_sprite)
-        return player_grp
+                        self.target = FlagTile(
+                            (x, y), [self.visible_sprites, self.active_sprites]
+                        )
     
-    def create_tile_group(self, layout, layout_type):
+    def create_sprites_from_layout(self, layout, layout_type, groups):
 
-        sprite_group = CameraGroup(self.player_group.sprites()[0], self.level_rect)
         for i, row in enumerate(layout):
             for j, cell in enumerate(row):
                 cell = int(cell)
                 if cell != -1:
                     x, y = j * TILE_SIZE, i * TILE_SIZE
                     if layout_type == 'water':
-                        sprite = WaterTile((x, y))
+                        WaterTile((x, y), groups)
                     elif layout_type in ['terrain', 'bg_terrain', 'bg_terrain2']:
-                        sprite = TerrainTile((x, y), cell)
+                        TerrainTile((x, y), groups, cell)
                     elif layout_type == 'grass':
-                        sprite = GrassTile((x, y), cell)
+                        GrassTile((x, y), groups, cell)
                     elif layout_type == 'coins':
-                        sprite = CoinTile((x, y), cell)
+                        CoinTile((x, y), groups, cell)
                     elif layout_type in ['fg_palms', 'bg_palms']:
-                        sprite = PalmTile((x, y), cell)
+                        PalmTile((x, y), groups, cell)
                     elif layout_type in ['crates']:
-                        sprite = CrateTile((x, y), cell)
+                        CrateTile((x, y), groups, cell)
                     elif layout_type == 'enemies':
-                        sprite = Enemy((x, y))
+                        enemies_constraints_group = pygame.sprite.Group([
+                            sprite for sprite in self.invisible_sprites.sprites() if sprite.__class__ == EnemyConstraint
+                        ])
+                        Enemy((x, y), groups, enemies_constraints_group)
                     elif layout_type == 'enemies_constraints':
-                        sprite = EnemyConstraint((x, y))
+                        EnemyConstraint((x, y), groups)
                     elif layout_type == 'spikes':
-                        sprite = SpikesTile((x, y))
-
-                    if not self.first_sprite and not self.last_sprite:
-                        self.first_sprite = sprite
-                        self.last_sprite = sprite
-                    elif self.first_sprite.rect > sprite.rect:
-                        self.first_sprite = sprite
-                    elif self.last_sprite.rect < sprite.rect:
-                        self.last_sprite = sprite
-                    sprite_group.add(sprite)
-
-        return sprite_group
+                        SpikesTile((x, y), groups)
          
     def create_coin_collect_animation(self, pos):
-        coin_animation = ParticleEffect(pos, ParticleEffectType.COLLECT_COIN)
-        self.particle_effects.add(coin_animation)
+        coin_animation = ParticleEffect(pos, [], ParticleEffectType.COLLECT_COIN)
+        self.visible_sprites.add(coin_animation)
+        self.active_sprites.add(coin_animation)
 
     def create_jump_animation(self, pos):
-        jump_particle_sprite = ParticleEffect(pos, ParticleEffectType.JUMP)
-        self.particle_effects.add(jump_particle_sprite)
+        jump_particle_sprite = ParticleEffect(pos, [], ParticleEffectType.JUMP)
+        self.visible_sprites.add(jump_particle_sprite)
+        self.active_sprites.add(jump_particle_sprite)
     
     def create_land_animation(self, pos):
-        land_particle_sprite = ParticleEffect(pos, ParticleEffectType.LAND)
-        self.particle_effects.add(land_particle_sprite)
+        land_particle_sprite = ParticleEffect(pos, [], ParticleEffectType.LAND)
+        self.visible_sprites.add(land_particle_sprite)
+        self.active_sprites.add(land_particle_sprite)
    
     def create_explosion_animation(self, pos):
-        explosion_particle_sprite = ParticleEffect(pos, ParticleEffectType.EXPLOSION)
-        self.particle_effects.add(explosion_particle_sprite)
+        explosion_particle_sprite = ParticleEffect(pos, [], ParticleEffectType.EXPLOSION)
+        self.visible_sprites.add(explosion_particle_sprite)
+        self.active_sprites.add(explosion_particle_sprite)
     
     def draw(self):
 
         self.sky.draw(self.display_surface)
         self.clouds.draw(self.display_surface)
-
         self.water.draw(self.display_surface)
 
-        for type, sprites in self.world_sprites.items():
-            if type not in ['enemies_constraints']:
-                sprites.draw()
+        self.visible_sprites.draw()
         
-        self.enemies.draw()
-
-        self.player_group.draw()
-
-        self.particle_effects.draw()
-
         self.health_bar.sprite.draw()
         self.coins_indicator.draw()
     
     def draw_outlines(self):
-        for type, sprites in self.world_sprites.items():
-            if type not in ['bg_terrain', 'crates', 'grass', 'coins', 'enemies', 'bg_palms', 'enemies_constraints']:
-                for sprite in sprites.sprites():
-                    draw_outline(self.display_surface, sprite)
-        
-        for enemy in self.enemies.sprites():
-            draw_outline(self.display_surface, enemy)
+        outlined_sprites = set(
+            self.player,
+            self.target,
+            *self.collision_sprites.sprites(),
+            *self.enemies.sprites(),
+            *self.invisible_sprites.sprites(),
+        )
+        for sprite in outlined_sprites:
+            draw_outline(self.display_surface, sprite)
 
-        draw_outline(self.display_surface, self.player_group.sprites()[0])
-        draw_outline(self.display_surface, self.player_group.sprites()[1])
-    
     def display_menu(self, is_completed):
         next_level = self.next_level if is_completed else self.stats.current_level
         navigate_to = self.next_level if is_completed else -1
@@ -227,69 +226,82 @@ class Level:
     def kill_enemy(self, enemy):
         enemy.kill()
         self.create_explosion_animation(enemy.rect.center)
-        self.player_group.sprites()[0].direction.y = -15
+        self.player.direction.y = -15
     
     def check_if_completed(self):
         """Checks if the player reached the goal."""
-        if pygame.sprite.collide_rect(self.player_group.sprites()[0], self.player_group.sprites()[1]):
-            self.pause()
-            self.display_menu(True)
+        if pygame.sprite.collide_rect(self.player, self.target):
+            self.prepare_to_pause()
+            self.level_completed = True
+            self.target.start_transition()
         
     def check_if_player_is_dead(self):
         """Checks if the player is dead."""
         if (
-            self.player_group.sprites()[0].rect.bottom > SCREEN_HEIGHT or
-            self.player_group.sprites()[0].health_bar.sprite.current_health <= 0
+            self.player.rect.bottom > SCREEN_HEIGHT or
+            self.player.health_bar.sprite.current_health <= 0
         ):
-            self.pause()
-            self.display_menu(False)
+            self.prepare_to_pause()
     
     def check_spike_collision(self):
-        for spike in self.world_sprites['spikes'].sprites():
-            if self.player_group.sprites()[0].rect.colliderect(spike.collide_rect):
-                self.player_group.sprites()[0].take_damage(spike.damage)
-                self.player_group.sprites()[0].direction.x *= -1
-                self.player_group.sprites()[0].direction.y = -12
+        if self.player.is_dead:
+            return
+        spikes = [sprite for sprite in self.visible_sprites.sprites() if sprite.__class__ == SpikesTile]
+        for spike in spikes:
+            if self.player.rect.colliderect(spike.collide_rect):
+                self.player.take_damage(spike.damage)
+                self.player.direction.x *= -1
+                self.player.direction.y = -12
     
     def check_enemy_collision(self):
-        for enemy in self.enemies.sprites():
-            if self.player_group.sprites()[0].rect.colliderect(enemy.rect):
-                player_rect = self.player_group.sprites()[0].rect
+        if self.player.is_dead:
+            return
+        enemies = [sprite for sprite in self.visible_sprites.sprites() if sprite.__class__ == Enemy]
+        for enemy in enemies:
+            if self.player.rect.colliderect(enemy.rect):
+                player_rect = self.player.rect
                 enemy_rect = enemy.rect
-                if self.player_group.sprites()[0].direction.x > 0 or enemy.direction.x < 0:
-                    if self.player_group.sprites()[0].direction.y == 0 or (
+                if self.player.direction.x > 0 or enemy.direction.x < 0:
+                    if self.player.direction.y == 0 or (
                         abs(player_rect.right - enemy_rect.left) < abs(player_rect.bottom - enemy_rect.top)
                     ):
-                        self.player_group.sprites()[0].take_damage(enemy.damage)
-                    elif self.player_group.sprites()[0].direction.y < 0:
-                        self.player_group.sprites()[0].take_damage(enemy.damage)
+                        self.player.take_damage(enemy.damage)
+                    elif self.player.direction.y < 0:
+                        self.player.take_damage(enemy.damage)
                     else:
                         self.kill_enemy(enemy)
                         self.play_soundeffect('stomp')
-                elif self.player_group.sprites()[0].direction.x < 0 or enemy.direction.x > 0:
-                    if self.player_group.sprites()[0].direction.y == 0 or (
+                elif self.player.direction.x < 0 or enemy.direction.x > 0:
+                    if self.player.direction.y == 0 or (
                         abs(enemy_rect.right - player_rect.left) < abs(player_rect.bottom - enemy_rect.top)
                     ):
-                        self.player_group.sprites()[0].take_damage(enemy.damage)
-                    elif self.player_group.sprites()[0].direction.y < 0:
-                        self.player_group.sprites()[0].take_damage(enemy.damage)
+                        self.player.take_damage(enemy.damage)
+                    elif self.player.direction.y < 0:
+                        self.player.take_damage(enemy.damage)
                     else:
                         self.kill_enemy(enemy)
                         self.play_soundeffect('stomp')
     
     def check_coin_collision(self):
-        for coin in self.world_sprites['coins'].sprites():
-            if self.player_group.sprites()[0].rect.colliderect(coin.rect):
-                self.player_group.sprites()[0].collect_coin(coin.type)
+        if self.player.is_dead:
+            return
+        coins = [sprite for sprite in self.collectible_sprites.sprites() if sprite.__class__ == CoinTile]
+        for coin in coins:
+            if self.player.rect.colliderect(coin.rect):
+                self.player.collect_coin(coin.type)
                 self.coins_indicator.add_coin(coin.type)
                 self.play_soundeffect('collect_coin')
                 self.create_coin_collect_animation(coin.rect.center)
                 coin.kill()
     
+    def prepare_to_pause(self):
+        self.pause_timer_start = pygame.time.get_ticks()
+        self.is_input_disabled = True
+
     def pause(self):
         self.stats.gold_coins = self.coins_indicator.gold_coins
         self.stats.silver_coins = self.coins_indicator.silver_coins
-        self.is_paused = True
+        self.display_menu(False)
     
     def run(self):
 
@@ -297,30 +309,22 @@ class Level:
         self.draw()
         if DEBUG is True:
             self.draw_outlines()
+        
+        if self.is_input_disabled and self.pause_timer_start > -1:
+            if pygame.time.get_ticks() - self.pause_timer_start >= self.pause_timer_duration:
+                self.pause()
+                self.pause_timer_start = -1
 
-        # Pause the game
-        if self.is_paused:
-            return
+        if not self.is_input_disabled:
+            self.check_spike_collision()
+            self.check_enemy_collision()
+            self.check_coin_collision()
+            self.check_if_completed()
+            self.check_if_player_is_dead()
 
-        # Player sprite
-        self.player_group.sprites()[0].update(self.world_sprites)
-        self.player_group.sprites()[1].update()
+            # Update UI
+            self.health_bar.update()
 
-        # Enemies spries
-        self.enemies.update(self.world_sprites['enemies_constraints'])
+        # Update active sprites
+        self.active_sprites.update()
 
-        # Particles
-        self.particle_effects.update()
-
-        # Level tiles
-        for sprites in self.world_sprites.values():
-            sprites.update()
-
-        self.check_spike_collision()
-        self.check_enemy_collision()
-        self.check_coin_collision()
-        self.check_if_completed()
-        self.check_if_player_is_dead()
-
-        # Update UI
-        self.health_bar.update()

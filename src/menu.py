@@ -2,14 +2,14 @@ import pygame
 from pygame import Vector2 as vec
 
 from settings import SCREEN_HEIGHT, SCREEN_WIDTH, colors, normal_font, large_font, small_font
-from stats import PlayerStats
+from data import PlayerData
 from tools import scale_rect
 
 
 class Menu:
 
-    def __init__(self, stats, surface: pygame.Surface, restart, view_map):
-        self.display_surface = surface
+    def __init__(self, stats, restart, view_map):
+        self.display_surface = pygame.display.get_surface()
         self.player_stats = stats
 
         # Game functions
@@ -75,7 +75,7 @@ class Menu:
         )
     
     def get_score(self):
-        stats: PlayerStats = self.player_stats
+        stats: PlayerData = self.player_stats
         return (
             stats.gold_coins * 500 + stats.silver_coins * 100
         )

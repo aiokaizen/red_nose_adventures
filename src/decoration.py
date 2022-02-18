@@ -54,7 +54,7 @@ class Clouds:
             x = random.randint(self.min_x, self.max_x)
             y = random.randint(self.min_y, self.max_y)
 
-            sprite = Tile((x, y), cloud)
+            sprite = Tile((x, y), [], cloud)
             self.cloud_sprites.add(sprite)
 
     def draw(self, surface):
@@ -73,7 +73,7 @@ class Water:
         for tile_index in range(tiles_number):
             x = tile_index * tile_width + left_border
             y = SCREEN_HEIGHT - water_level
-            sprite = WaterTile((x, y))
+            sprite = WaterTile((x, y), [])
             self.water_sprites.add(sprite)
 
     def draw(self, surface):

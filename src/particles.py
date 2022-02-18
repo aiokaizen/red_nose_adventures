@@ -7,8 +7,8 @@ from settings import ANIMATION_FPS, BASE_DIR, FPS
 
 class ParticleEffect(pygame.sprite.Sprite):
 
-    def __init__(self, pos, type):
-        super().__init__()
+    def __init__(self, pos, groups, type):
+        super().__init__(groups)
         self.frame_index = 0
         self.animation_speed = ANIMATION_FPS
         frames_folder = BASE_DIR + '/graphics/character/dust_particles/' + type.value

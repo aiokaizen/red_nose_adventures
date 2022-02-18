@@ -7,8 +7,8 @@ from tools import import_cut_graphics, import_folder
 
 class Tile(pygame.sprite.Sprite):
     
-    def __init__(self, pos, surface=None):
-        super().__init__()
+    def __init__(self, pos, groups=[], surface=None):
+        super().__init__(groups)
         if surface:
             self.image = surface
             self.rect = self.image.get_rect(topleft=pos)
@@ -21,8 +21,8 @@ class Tile(pygame.sprite.Sprite):
 
 class AnimatedTile(Tile):
 
-    def __init__(self, pos, animations_dirs, graphic_id=0):
-        super().__init__(pos)
+    def __init__(self, pos, groups, animations_dirs, graphic_id=0):
+        super().__init__(pos, groups)
         self.frame_index = 0
         self.animation_speed = ANIMATION_FPS
         self.keyframes = import_folder(animations_dirs[graphic_id])
@@ -41,8 +41,8 @@ class AnimatedTile(Tile):
 
 class CloudTile(Tile):
 
-    def __init__(self, pos, graphic_id=-1):
-        super().__init__(pos)
+    def __init__(self, pos, groups, graphic_id=-1):
+        super().__init__(pos, groups)
         if graphic_id != -1:
             image_paths = [
                 BASE_DIR + '/graphics/decoration/clouds/1.png',
@@ -61,18 +61,18 @@ class CloudTile(Tile):
 
 class WaterTile(AnimatedTile):
 
-    def __init__(self, pos):
+    def __init__(self, pos, groups):
         image_paths = [
             BASE_DIR + '/graphics/decoration/water/',
         ]
-        super().__init__(pos, image_paths)
+        super().__init__(pos, groups, image_paths)
         self.rect = self.image.get_rect(topleft=pos)
 
 
 class TerrainTile(Tile):
 
-    def __init__(self, pos, graphic_id=-1):
-        super().__init__(pos)
+    def __init__(self, pos, groups, graphic_id=-1):
+        super().__init__(pos, groups)
         if graphic_id != -1:
             terrain_tile_list = import_cut_graphics(path.join(BASE_DIR, "graphics", "terrain", "terrain_tiles_extended.png"))
             self.image = terrain_tile_list[graphic_id]
@@ -81,8 +81,8 @@ class TerrainTile(Tile):
 
 class GrassTile(Tile):
 
-    def __init__(self, pos, graphic_id=-1):
-        super().__init__(pos)
+    def __init__(self, pos, groups, graphic_id=-1):
+        super().__init__(pos, groups)
         if graphic_id != -1:
             grass_tile_list = import_cut_graphics(path.join(BASE_DIR, "graphics", "decoration", "grass", "grass.png"))
             self.image = grass_tile_list[graphic_id]
@@ -91,7 +91,7 @@ class GrassTile(Tile):
 
 class PalmTile(AnimatedTile):
 
-    def __init__(self, pos, graphic_id=-1):
+    def __init__(self, pos, groups, graphic_id=-1):
         paths = [
             BASE_DIR + '/graphics/terrain/palm_small',
             BASE_DIR + '/graphics/terrain/palm_large',
@@ -100,14 +100,14 @@ class PalmTile(AnimatedTile):
             BASE_DIR + '/graphics/terrain/palm_bg_left',
             BASE_DIR + '/graphics/terrain/palm_bg_right',
         ]
-        super().__init__(pos, paths, graphic_id)
+        super().__init__(pos, groups, paths, graphic_id)
         self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
 
 
 class CrateTile(Tile):
 
-    def __init__(self, pos, graphic_id=-1):
-        super().__init__(pos)
+    def __init__(self, pos, groups, graphic_id=-1):
+        super().__init__(pos, groups)
         if graphic_id != -1:
             self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "terrain", "crate.png")).convert_alpha()
             self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
@@ -115,21 +115,21 @@ class CrateTile(Tile):
 
 class CoinTile(AnimatedTile):
 
-    def __init__(self, pos, graphic_id=-1):
+    def __init__(self, pos, groups, graphic_id=-1):
         paths = [
             BASE_DIR + '/graphics/items/coins/gold',
             BASE_DIR + '/graphics/items/coins/silver',
         ]
         self.type = 'gold' if graphic_id == 0 else 'silver'
-        super().__init__(pos, paths, graphic_id)
+        super().__init__(pos, groups, paths, graphic_id)
         center_x, center_y = pos[0] + int(TILE_SIZE / 2), pos[1] + int(TILE_SIZE / 2)
         self.rect = self.image.get_rect(center=(center_x, center_y))
 
 
 class SpikesTile(Tile):
 
-    def __init__(self, pos):
-        super().__init__(pos)
+    def __init__(self, pos, groups):
+        super().__init__(pos, groups)
         self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "terrain", "spikes.png")).convert_alpha()
         self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
         self.collide_rect = pygame.Rect(self.rect.left, self.rect.top + 32, self.rect.width, self.rect.height - 32)
@@ -145,7 +145,7 @@ class FlagTile(AnimatedTile):
         'trans_to_no_wind',
     ]
 
-    def __init__(self, pos):
+    def __init__(self, pos, groups):
         self.animation_states = {
             'no_wind': BASE_DIR + '/graphics/sail/no_wind',
             'trans_to_wind': BASE_DIR + '/graphics/sail/trans_to_wind',
@@ -154,7 +154,7 @@ class FlagTile(AnimatedTile):
         }
         self.state = FlagTile.FLAG_STATES[0]
         self.transition_state = FlagTile.FLAG_STATES[1]
-        super().__init__(pos, [self.animation_states[self.state]])
+        super().__init__(pos, groups, [self.animation_states[self.state]])
         self.rect.y += TILE_SIZE
 
         self.transitionning = False
