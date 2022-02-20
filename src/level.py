@@ -1,5 +1,11 @@
+from copy import copy
+import threading
+
 import pygame
+
 from camera import CameraGroup
+from data import PlayerData
+from loading_screens import LoadingScreen
 from tile import *
 from player import Player
 from settings import *
@@ -21,13 +27,15 @@ class Level:
         self.display_surface = pygame.display.get_surface()
         self.level_data = level_data
         self.show_menu = show_menu
-        self.stats = stats
-        self.next_level = self.stats.current_level + 1
+        self.player_data: PlayerData = stats
+        self.level_id = self.player_data.current_level
+        self.next_level = self.level_id + 1
+        self.level_stats = copy(PlayerData().levels[self.level_id])  # Initialized level data dict
         self.coins_indicator = CoinsIndicator(self.display_surface)
         self.is_input_disabled = False
         self.level_completed = False
         self.pause_timer_start = 0
-        self.pause_timer_duration = 2000
+        self.pause_timer_duration = 1500
         
         tmp_layout = import_csv_layout(level_data['player'])
         self.level_rect = pygame.Rect(
@@ -42,16 +50,20 @@ class Level:
         self.invisible_sprites = pygame.sprite.Group()  # Invisible sprites (Hidden objects, and enemeies constraints)
         self.enemies = pygame.sprite.Group()  # Collision sprites
         # self.particle_effects = pygame.sprite.Group()  # Particle effects sprites
+        self.loading_finished = False
+        self.loading_current_value = 0
+        self.loading_screen = LoadingScreen(self.get_total_sprites_number())
 
-        self.setup_level()
-    
+        threading.Thread(target=self.setup_level, args=(self, )).start()
+
         # Audio
         self.soundeffects = {
             'collect_coin': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'coin.wav')),
             'stomp': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'stomp.wav')),
         }
 
-    def play_soundeffect(self, soundeffect, volume=0.05):
+    def play_soundeffect(self, soundeffect):
+        volume = self.player_data.preferences['vfx_volume']
         sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
         sound.set_volume(volume)
         sound.play()
@@ -62,15 +74,27 @@ class Level:
             '4', '5', '6', '7', '8', '9', '10',
             '16', '17', '18', '19', '20', '21', '22', '23'
         ]
+    
+    def get_total_sprites_number(self):
+        layers_number = len(self.level_data.items())
+        example_layer = import_csv_layout(self.level_data['player'])
+        level_width = len(example_layer[0])
+        level_height = len(example_layer)
+        total_sprite_number = level_width * level_height * layers_number
+        return total_sprite_number
  
-    def setup_level(self):
+    def setup_level(self, caller=None):
+
+        self = caller if caller else self
 
         self.sky = Sky(horizon=5)
         self.water = Water(35, self.level_rect.width)
         self.clouds = Clouds(8, self.level_rect.width, 20)
 
         # Setup UI
-        self.setup_ui()
+        self.health_bar = pygame.sprite.GroupSingle(
+            HealthBar(self.player_data.max_health, self.player_data.max_health, self.display_surface)
+        )
 
         bg_palms_layout = import_csv_layout(self.level_data['bg_palms'])
         self.create_sprites_from_layout(bg_palms_layout, 'bg_palms', [self.visible_sprites, self.active_sprites])
@@ -118,11 +142,15 @@ class Level:
 
         self.visible_sprites.set_target(self.player)
     
-    def setup_ui(self):
-        self.health_bar = pygame.sprite.GroupSingle(
-            HealthBar(self.stats.health, self.stats.max_health, self.display_surface)
-        )
-     
+        # Set initial state
+        self.initial_state = {
+            'enemies': len([sprite for sprite in self.enemies.sprites() if sprite.__class__ == Enemy]),
+            'gold_coins': len([sprite for sprite in self.collectible_sprites.sprites() if sprite.__class__ == CoinTile and sprite.type == 'gold']),
+            'silver_coins': len([sprite for sprite in self.collectible_sprites.sprites() if sprite.__class__ == CoinTile and sprite.type == 'silver']),
+        }
+
+        self.loading_finished = True
+    
     def setup_player(self, layout):
 
         for i, row in enumerate(layout):
@@ -139,12 +167,15 @@ class Level:
                             (x, y),
                             [self.active_sprites],
                             self.collision_sprites,
+                            self.player_data,
                             self.health_bar, self.display_surface, player_animations
                         )
                     else:
                         self.target = FlagTile(
                             (x, y), [self.visible_sprites, self.active_sprites]
                         )
+                self.loading_screen.increment()
+
         # Adding player to visible sprites late to show it on top
         # of the target sprite
         self.visible_sprites.add(self.player)
@@ -177,6 +208,7 @@ class Level:
                         EnemyConstraint((x, y), groups)
                     elif layout_type == 'spikes':
                         SpikesTile((x, y), groups)
+                self.loading_screen.increment()
          
     def create_coin_collect_animation(self, pos):
         coin_animation = ParticleEffect(pos, [], ParticleEffectType.COLLECT_COIN)
@@ -220,13 +252,12 @@ class Level:
         for sprite in outlined_sprites:
             draw_outline(self.display_surface, sprite)
 
-    def display_menu(self, is_completed):
-        next_level = self.next_level if is_completed else self.stats.current_level
-        navigate_to = self.next_level if is_completed else -1
-        pygame.mixer.music.unload()
-        self.show_menu(next_level, navigate_to)
+    def display_menu(self):
+        next_level = self.next_level if self.level_completed else self.level_id
+        self.show_menu(next_level)
     
     def kill_enemy(self, enemy):
+        self.level_stats['enemies_killed'] += 1
         enemy.kill()
         self.create_explosion_animation(enemy.rect.center)
         self.player.direction.y = -15
@@ -296,6 +327,7 @@ class Level:
                 self.coins_indicator.add_coin(coin.type)
                 self.play_soundeffect('collect_coin')
                 self.create_coin_collect_animation(coin.rect.center)
+                self.level_stats[f'{coin.type}_coins'] += 1
                 coin.kill()
     
     def prepare_to_pause(self):
@@ -303,11 +335,16 @@ class Level:
         self.is_input_disabled = True
 
     def pause(self):
-        self.stats.gold_coins = self.coins_indicator.gold_coins
-        self.stats.silver_coins = self.coins_indicator.silver_coins
-        self.display_menu(False)
+        # Update player's stats
+        self.player_data.update_level_data(self.level_id, self.level_stats, self.initial_state)
+        self.display_menu()
     
     def run(self):
+
+        # Render loading screen
+        if not self.loading_finished:
+            self.loading_screen.run()
+            return
 
         # Draw
         self.draw()

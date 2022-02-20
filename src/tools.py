@@ -96,7 +96,15 @@ def load_player_data(path=''):
             secret_key = SECRET_KEY
             key = fernet.Fernet(secret_key)
             json_stats = key.decrypt(stats)
-            player_stats = PlayerData.from_dict(json.loads(json_stats))
+            stats_dict = json.loads(json_stats)
+
+            # Change str keys for levels to ints - json does not support ints as dict keys
+            levels = {}
+            for lvl, data in stats_dict['levels'].items():
+                levels[int(lvl)] = data
+            stats_dict['levels'] = levels
+
+            player_stats = PlayerData.from_dict(stats_dict)
             return player_stats
         except Exception as e:
             logging.error(str(e))
@@ -141,9 +149,6 @@ def get_level_data(level):
         'crates': f'{base_dir}/level_{level}_crates.csv',
         'fg_palms': f'{base_dir}/level_{level}_fg_palms.csv',
         'bg_palms': f'{base_dir}/level_{level}_bg_palms.csv',
-        'sky': f'{base_dir}/level_{level}_sky.csv',
-        'clouds': f'{base_dir}/level_{level}_clouds.csv',
-        'water': f'{base_dir}/level_{level}_water.csv',
     }
 
 

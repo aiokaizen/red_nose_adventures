@@ -1,12 +1,10 @@
 import sys
-from datetime import datetime
-
 import pygame
 
 from settings import *
 from tools import debug
-
 from game import Game
+from loading_screens import WelcomeScreen
 
 
 def main():
@@ -15,6 +13,7 @@ def main():
     pygame.display.set_caption("Red nose adventures")
     clock = pygame.time.Clock()
     game  = Game()
+    welcome = WelcomeScreen()
 
     while True:
         for _ in pygame.event.get(pygame.QUIT):
@@ -22,6 +21,8 @@ def main():
             sys.exit()
         
         game.run()
+        if not welcome.finished:
+            welcome.run()
 
         if DEBUG:
             debug_infos = 'DEBUG mode is ON...'

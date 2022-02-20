@@ -12,7 +12,7 @@ from tile import Tile
 
 class Player(pygame.sprite.Sprite):
 
-    def __init__(self, pos, groups, collision_sprites, health_bar, surface: pygame.Surface, animation_functions: dict):
+    def __init__(self, pos, groups, collision_sprites, player_data, health_bar, surface: pygame.Surface, animation_functions: dict):
         super().__init__(groups)
 
         # Dust particles animation
@@ -37,6 +37,7 @@ class Player(pygame.sprite.Sprite):
         self.collision_sprites = collision_sprites
         
         # Player stats
+        self.player_data = player_data
         self.health_bar = health_bar
         self.gold_coins = 0
         self.silver_coins = 0
@@ -83,7 +84,8 @@ class Player(pygame.sprite.Sprite):
         self.state = PlayerState.IDLE
         self.level_completed = True
     
-    def play_soundeffect(self, soundeffect, volume=0.05):
+    def play_soundeffect(self, soundeffect):
+        volume = self.player_data.preferences['vfx_volume']
         sound: pygame.mixer.Sound = self.soundeffects[soundeffect]
         sound.set_volume(volume)
         sound.play()

@@ -5,6 +5,7 @@ from pygame import Vector2 as vec
 from settings import *
 from decoration import Sky, Clouds
 from tile import AnimatedTile
+from ui import Label, Slider
 
 
 class Node(AnimatedTile):
@@ -71,6 +72,17 @@ class Overworld:
                 self.go_next_node()
             else:
                 self.go_previous_node()
+        
+        # Settings
+        self.settings = pygame.sprite.Group()
+        self.labels = pygame.sprite.Group()
+        self.music_volume_label = Label((10, 10), 'Music volume: ', groups=self.labels)
+        music_volume = self.player_stats.preferences.get('music_volume', 0.04)
+        self.music_volume_slider = Slider((180, 10), music_volume, 0, 1, groups=[self.settings])
+
+        self.vfx_volume_label = Label((10, 40), 'VFX volume: ', groups=self.labels)
+        vfx_volume = self.player_stats.preferences.get('vfx_volume', 0.04)
+        self.vfx_volume_slider = Slider((180, 40), vfx_volume, 0, 1, groups=[self.settings])
     
     def setup_levels(self):
         self.nodes = pygame.sprite.Group()
@@ -90,6 +102,20 @@ class Overworld:
         if len(nodes) >= 1:
             return nodes[0]
         return None
+    
+    def update_volume(self, music_sounds=[], vfx_sounds=[]):
+        music_volume = self.music_volume_slider.current_value
+        vfx_volume = self.vfx_volume_slider.current_value
+
+        if music_volume != self.player_stats.preferences['music_volume']:
+            self.player_stats.preferences['music_volume'] = music_volume
+            for sound in music_sounds:
+                sound.set_volume(music_volume)
+
+        if vfx_volume != self.player_stats.preferences['vfx_volume']:
+            self.player_stats.preferences['vfx_volume'] = vfx_volume
+            for sound in vfx_sounds:
+                sound.set_volume(vfx_volume)
     
     def get_input(self):
         if not self.hat.sprite.is_moving and self.allow_input:
@@ -128,8 +154,11 @@ class Overworld:
         self.draw_lines()
         self.nodes.draw(self.display_surface)
         self.hat.draw(self.display_surface)
+        self.labels.draw(self.display_surface)
+        for sprite in self.settings.sprites():
+            sprite.draw()
 
-    def run(self):
+    def run(self, music_sounds=[], vfx_sounds=[]):
         if not self.allow_input:
             current_time = pygame.time.get_ticks()
             if current_time - self.start_time >= 500:
@@ -137,4 +166,10 @@ class Overworld:
         self.get_input()
         self.hat.update()
         self.nodes.update()
+
+        # Settings
+        for sprite in self.settings.sprites():
+            sprite.update()
+
+        self.update_volume(music_sounds, vfx_sounds)
         self.draw()
