@@ -1,9 +1,11 @@
 from os import path
+from types import FunctionType
 
 import pygame
 from pygame import Vector2 as vec
 
 from settings import colors, large_font, normal_font, small_font, BASE_DIR
+from tools import empty_fn
 
 
 class LevelUI:
@@ -113,6 +115,10 @@ class Button(pygame.sprite.Sprite):
         self.rect.topleft = topleft
         self.label.rect.topleft = vec(topleft) + self.padding
     
+    def move(self, distance: vec):
+        self.rect.move_ip(distance)
+        self.label.rect.move_ip(distance)
+    
     def get_input(self):
         mouse_left_pressed = pygame.mouse.get_pressed()[0]
         if mouse_left_pressed:
@@ -134,11 +140,12 @@ class Button(pygame.sprite.Sprite):
 
 class Slider(pygame.sprite.Sprite):
 
-    def __init__(self, pos, current_value=50, min_value=0, max_value=100, size=(200, 20), color=colors.dark, bg_color=None, groups=[]):
+    def __init__(self, pos, current_value=50, min_value=0, max_value=100, size=(200, 20), color=colors.dark, bg_color=None, on_release=empty_fn, groups=[]):
         super().__init__(groups)
         self.display_surface = pygame.display.get_surface()
         self.color = color
         self.bg_color = bg_color
+        self.on_release = on_release
 
         self.current_value = current_value
         self.min_value = min_value
@@ -164,7 +171,13 @@ class Slider(pygame.sprite.Sprite):
     
     def set_position(self, topleft):
         self.rect.topleft = topleft
-        self.label.rect.topleft = vec(topleft) + self.padding
+        self.track_rect.topleft = vec(topleft) + vec(5, self.track_height)
+        self.selected_track_rect.topleft = self.track_rect.topleft
+    
+    def move(self, distance: vec):
+        self.rect.move_ip(distance)
+        self.track_rect.move_ip(distance)
+        self.selected_track_rect.move_ip(distance)
     
     def update_track(self):
         if self.selecting_value:
@@ -191,6 +204,7 @@ class Slider(pygame.sprite.Sprite):
                 self.selecting_value = True
                 self.update_track()
         elif self.selecting_value:
+            self.on_release()
             self.selecting_value = False
     
     def hovered(self):

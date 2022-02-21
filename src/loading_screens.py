@@ -69,7 +69,7 @@ class WelcomeScreen:
         self.background = pygame.Surface(pygame.display.get_window_size())
         self.background.fill('#050505')
 
-        self.logo = self.font.render('EKB Games', True, colors.light)
+        self.logo = self.font.render('EKB Games', True, colors.white)
         self.logo.set_alpha(0)
         self.logo_rect = self.logo.get_rect(
             center=vec(pygame.display.get_window_size()) / 2

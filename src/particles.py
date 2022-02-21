@@ -16,6 +16,9 @@ class ParticleEffect(pygame.sprite.Sprite):
             frames_folder = join(BASE_DIR, 'graphics', 'enemy', 'explosion')
         elif type == ParticleEffectType.COLLECT_COIN:
             frames_folder = join(BASE_DIR, 'graphics', 'items', 'coins', 'effect')
+        elif type == ParticleEffectType.COLLECT_SKULL:
+            frames_folder = join(BASE_DIR, 'graphics', 'items', 'skull_effect')
+
         self.frames = import_folder(frames_folder) 
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(center=pos)

@@ -63,12 +63,13 @@ class Player(pygame.sprite.Sprite):
         self.gravity = 1.2
         self.jumps_left = 2
         self.jump_height = -22
+        self.jump_delay = 200
+        self.last_jump_time = pygame.time.get_ticks()
         self.is_airborn = False
         self.is_falling = False
 
         # Abilities
-        self.can_jump_while_falling = False
-        self.can_double_jump = False
+        self.double_jump = False
         self.is_invincible = 0
         self.invincibility_start_time = -1
         self.invincibility_duration = 0  # in miliseconds
@@ -192,18 +193,26 @@ class Player(pygame.sprite.Sprite):
                     self.is_facing_right = True
     
     def jump(self):
+        time_between_jumps = pygame.time.get_ticks() - self.last_jump_time
         if (
-            self.jumps_left > 0 and
-            (self.touching_ground or self.can_jump_while_falling) and
-            (self.jumps_left >= 2 or self.direction.y > self.jump_height + 10)
+            time_between_jumps < self.jump_delay or
+            self.jumps_left == 0 or
+            (not self.touching_ground and not self.double_jump)
         ):
-            self.direction.y = self.jump_height
-            self.rect.y += self.direction.y
-            self.is_airborn = True
-            self.animation_functions['jump'](self.rect.midbottom + vec(0, 9))
-            self.jumps_left = self.jumps_left -1 if self.can_double_jump else 0
-            self.frame_index = 0
-            self.play_soundeffect('jump')
+            return
+        
+        self.direction.y = self.jump_height
+        self.rect.y += self.direction.y
+        self.is_airborn = True
+        self.animation_functions['jump'](self.rect.midbottom + vec(0, 9))
+        self.frame_index = 0
+
+        if not self.touching_ground and self.double_jump:
+            self.jumps_left = 0
+        else:       
+            self.jumps_left = self.jumps_left - 1 if self.double_jump else 0
+        self.last_jump_time = pygame.time.get_ticks()
+        self.play_soundeffect('jump')
     
     def apply_gravity(self):
         self.direction.y += self.gravity
@@ -352,6 +361,10 @@ class Player(pygame.sprite.Sprite):
             self.gold_coins += 1
         elif type == 'silver':
             self.silver_coins += 1
+
+    def collect_skull(self):
+        self.double_jump = True
+        self.player_data.abuilities.append('double_jump')
 
     def draw(self, new_rect=None):
         

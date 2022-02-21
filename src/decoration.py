@@ -4,7 +4,7 @@ from os.path import join
 import pygame
 
 from settings import *
-from tile import Tile, WaterTile, CloudTile
+from tile import Tile, WaterReflectionTile
 from tools import import_folder
 
 
@@ -22,7 +22,7 @@ class Sky:
         self.bottom = pygame.transform.scale(self.bottom, (SCREEN_WIDTH, TILE_SIZE))
     
     def draw(self, surface):
-        for row in range(VERTICAL_ROWS):
+        for row in range(SCREEN_HEIGHT // TILE_SIZE):
             y = row * TILE_SIZE
             if row < self.horizon:
                 surface.blit(self.top, (0, y))
@@ -34,11 +34,11 @@ class Sky:
 
 class Clouds:
 
-    def __init__(self, horizon, world_width, cloud_number, overworld=False):
+    def __init__(self, lowest_point, world_width, cloud_number, overworld=False):
         self.min_x = -SCREEN_WIDTH
         self.max_x = world_width + SCREEN_WIDTH
         self.min_y = 0
-        self.max_y = horizon * TILE_SIZE
+        self.max_y = lowest_point * TILE_SIZE
         self.cloud_number = cloud_number
         self.overworld_clouds = overworld
         self.generate_clouds()
@@ -49,7 +49,7 @@ class Clouds:
         else:
             cloud_surface_list = import_folder(join(BASE_DIR, "graphics", "decoration", "clouds"))
         self.cloud_sprites = pygame.sprite.Group()
-        for n in range(self.cloud_number):
+        for _ in range(self.cloud_number):
             cloud = random.choice(cloud_surface_list)
             x = random.randint(self.min_x, self.max_x)
             y = random.randint(self.min_y, self.max_y)
@@ -58,24 +58,23 @@ class Clouds:
             self.cloud_sprites.add(sprite)
 
     def draw(self, surface):
-        self.cloud_sprites.update()
         self.cloud_sprites.draw(surface)
 
 
 class Water:
 
-    def __init__(self, water_level, world_width):
-        left_border = -SCREEN_WIDTH
-        tile_width = 192
-        tiles_number = int((world_width + SCREEN_WIDTH * 3) / tile_width)
-        self.water_sprites = pygame.sprite.Group()
-
-        for tile_index in range(tiles_number):
-            x = tile_index * tile_width + left_border
-            y = SCREEN_HEIGHT - water_level
-            sprite = WaterTile((x, y), [])
-            self.water_sprites.add(sprite)
+    def __init__(self, water_level):
+        self.display_surface = pygame.display.get_surface()
+        self.water_level = water_level
+        self.water_level_px = self.water_level * TILE_SIZE + 15
+        self.water = pygame.image.load(BASE_DIR + '/graphics/decoration/water/water.png')
+        self.water = pygame.transform.scale(self.water, (SCREEN_WIDTH, TILE_SIZE))
+        self.particles = WaterReflectionTile((SCREEN_WIDTH // 2 - 100, (self.water_level_px + 20)), 'big')
 
     def draw(self, surface):
-        self.water_sprites.update()
-        self.water_sprites.draw(surface)
+        for row in range(self.water_level, SCREEN_HEIGHT // TILE_SIZE):
+            y = row * TILE_SIZE + 15
+            surface.blit(self.water, (0, y))
+        pygame.draw.line(self.display_surface, colors.white, (0, self.water_level_px), (SCREEN_WIDTH, self.water_level_px))
+        self.particles.update()
+        self.display_surface.blit(self.particles.image, self.particles.rect)

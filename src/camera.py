@@ -15,7 +15,7 @@ class CameraGroup(pygame.sprite.Group):
         self.target: pygame.sprite.Sprite = target
         borders = CAMERA_BORDERS
         self.camera_rect = pygame.Rect(
-            borders['left'], borders['top'],
+            borders['left'], -borders['top'],  # Initiating the camera position in a spot that will always trigger it's adjusting functions
             pygame.display.get_window_size()[0] - (borders['left'] + borders['right']),
             pygame.display.get_window_size()[1] - (borders['top'] + borders['bottom'])
         )
@@ -30,11 +30,8 @@ class CameraGroup(pygame.sprite.Group):
     
     def update_view(self):
         self.view.topleft = self.position - (CAMERA_BORDERS['left'], CAMERA_BORDERS['top'])
-
-    def draw(self):
-        sprites = self.sprites()
-        surface = self.display_surface
-
+    
+    def adjust_camera_position(self):
         # Horizontal movement
         if self.target.rect.left < self.camera_rect.left:
             self.position.x += self.target.rect.left - self.camera_rect.left
@@ -66,11 +63,17 @@ class CameraGroup(pygame.sprite.Group):
             if self.view.bottom > self.lvl_rect.bottom:
                 self.camera_rect.bottom = self.lvl_rect.bottom - CAMERA_BORDERS['bottom']
                 self.position.y = self.lvl_rect.bottom - self.camera_rect.height - CAMERA_BORDERS['bottom']
-            
+        
         self.offset = vec(
             self.camera_rect.left - CAMERA_BORDERS['left'],
             self.camera_rect.top - CAMERA_BORDERS['top']
         )
+
+    def draw(self):
+        sprites = self.sprites()
+        surface = self.display_surface
+
+        self.adjust_camera_position()
 
         if DEBUG:
             camera_offset = self.camera_rect.copy()

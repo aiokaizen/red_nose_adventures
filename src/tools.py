@@ -48,6 +48,7 @@ class ParticleEffectType(Enum):
     LAND = "land"
     EXPLOSION = 'expolosion'
     COLLECT_COIN = 'collect_coin'
+    COLLECT_SKULL = 'collect_skull'
 
     @classmethod
     def from_value(cls, value: str):
@@ -144,12 +145,21 @@ def get_level_data(level):
         'enemies': f'{base_dir}/level_{level}_enemies.csv',
         'enemies_constraints': f'{base_dir}/level_{level}_enemies_constraints.csv',
         'coins': f'{base_dir}/level_{level}_coins.csv',
+        'collectibles': f'{base_dir}/level_{level}_collectibles.csv',
         'spikes': f'{base_dir}/level_{level}_spikes.csv',
         'grass': f'{base_dir}/level_{level}_grass.csv',
         'crates': f'{base_dir}/level_{level}_crates.csv',
         'fg_palms': f'{base_dir}/level_{level}_fg_palms.csv',
         'bg_palms': f'{base_dir}/level_{level}_bg_palms.csv',
     }
+
+def empty_fn():
+    pass
+
+def play_example_vfx(volume=0.5):
+    vfx = pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'jump.wav'))
+    vfx.set_volume(volume)
+    vfx.play()
 
 
 def import_csv_layout(file_path):

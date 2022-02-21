@@ -28,6 +28,7 @@ class AnimatedTile(Tile):
         self.keyframes = import_folder(animations_dirs[graphic_id])
         self.image = self.keyframes[int(self.frame_index)]
         self.rect = self.image.get_rect(bottomleft=pos)
+        self.collid_rect = self.rect
     
     def animate(self):
         self.image = self.keyframes[int(self.frame_index)]
@@ -59,11 +60,12 @@ class CloudTile(Tile):
             self.rect.x = first_sprite.rect.x - SCREEN_WIDTH
 
 
-class WaterTile(AnimatedTile):
+class WaterReflectionTile(AnimatedTile):
 
-    def __init__(self, pos, groups):
+    def __init__(self, pos, size='big', groups=[]):
+        path = BASE_DIR + f'/graphics/decoration/water/reflection_{size}'
         image_paths = [
-            BASE_DIR + '/graphics/decoration/water/',
+            path,
         ]
         super().__init__(pos, groups, image_paths)
         self.rect = self.image.get_rect(topleft=pos)
@@ -111,6 +113,26 @@ class CrateTile(Tile):
         if graphic_id != -1:
             self.image = pygame.image.load(path.join(BASE_DIR, "graphics", "terrain", "crate.png")).convert_alpha()
             self.rect = self.image.get_rect(bottomleft=(pos[0], pos[1] + TILE_SIZE))
+
+
+class CollectibleTile(AnimatedTile):
+
+    def __init__(self, pos, groups, graphic_id=-1):
+        paths = [
+            BASE_DIR + '/graphics/items/golden_skull',
+            BASE_DIR + '/graphics/items/red_diamond',
+            BASE_DIR + '/graphics/items/green_bottle',
+        ]
+        self.type = 'golden_skull'
+        if graphic_id == 1:
+            self.type = 'red_diamond'
+        elif graphic_id == 2:
+            self.type = 'green_bottle'
+        super().__init__(pos, groups, paths, graphic_id)
+        center_x, center_y = pos[0] + int(TILE_SIZE / 2), pos[1] + int(TILE_SIZE / 2)
+        self.rect = self.image.get_rect(center=(center_x, center_y))
+        self.collid_rect.height = 26
+        self.collid_rect.bottom = self.rect.bottom
 
 
 class CoinTile(AnimatedTile):

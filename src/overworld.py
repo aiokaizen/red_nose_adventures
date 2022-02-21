@@ -1,11 +1,13 @@
 from os import path
+import sys
 import pygame
 from pygame import Vector2 as vec
 
 from settings import *
 from decoration import Sky, Clouds
 from tile import AnimatedTile
-from ui import Label, Slider
+from tools import play_example_vfx
+from ui import Button, Label, Slider
 
 
 class Node(AnimatedTile):
@@ -74,15 +76,27 @@ class Overworld:
                 self.go_previous_node()
         
         # Settings
-        self.settings = pygame.sprite.Group()
+        self.controllers = pygame.sprite.Group()
         self.labels = pygame.sprite.Group()
-        self.music_volume_label = Label((10, 10), 'Music volume: ', groups=self.labels)
+        self.menu_is_visible = False
+        self.is_menu_toggle_running = False
+        self.menu_wrapper = pygame.Rect(0, -90, 600, 90)
+        self.settings_btn = Button(
+            (0, 0), 'Settings', self.start_toggle_menu, font_size='small', bg_color=colors.skyred,
+            color=colors.dark, border_width=2, groups=[self.controllers]
+        )
+        self.exit_btn = Button(
+            (self.settings_btn.rect.width, 0), 'Exit', self.exit, font_size='small', bg_color=colors.darkred,
+            color=colors.light, border_width=2, groups=[self.controllers]
+        )
+        menu_tl = vec(self.menu_wrapper.topleft)
+        self.music_volume_label = Label(menu_tl + vec(10, 10), 'Music volume: ', groups=self.labels)
         music_volume = self.player_stats.preferences.get('music_volume', 0.04)
-        self.music_volume_slider = Slider((180, 10), music_volume, 0, 1, groups=[self.settings])
+        self.music_volume_slider = Slider(menu_tl + vec(180, 10), music_volume, 0, 1, groups=[self.controllers])
 
-        self.vfx_volume_label = Label((10, 40), 'VFX volume: ', groups=self.labels)
+        self.vfx_volume_label = Label(menu_tl + vec(10, 40), 'VFX volume: ', groups=self.labels)
         vfx_volume = self.player_stats.preferences.get('vfx_volume', 0.04)
-        self.vfx_volume_slider = Slider((180, 40), vfx_volume, 0, 1, groups=[self.settings])
+        self.vfx_volume_slider = Slider(menu_tl + vec(180, 40), vfx_volume, 0, 1, on_release=self.play_vfx, groups=[self.controllers])
     
     def setup_levels(self):
         self.nodes = pygame.sprite.Group()
@@ -102,6 +116,40 @@ class Overworld:
         if len(nodes) >= 1:
             return nodes[0]
         return None
+
+    def start_toggle_menu(self):
+        self.is_menu_toggle_running = True
+    
+    def play_vfx(self):
+        play_example_vfx(self.player_stats.preferences['vfx_volume'])
+    
+    def move_menu(self, distance: vec):
+        self.menu_wrapper.move_ip(distance)
+        for label in self.labels.sprites():
+            label.rect.move_ip(distance)
+        for controller in self.controllers.sprites():
+            controller.move(distance)
+
+    def toggle_menu(self):
+        move_by = 3
+        if self.menu_is_visible:
+            self.move_menu(vec(0, -move_by))
+            if self.menu_wrapper.bottom <= 0:
+                if self.menu_wrapper.bottom < 0:
+                    self.move_menu(vec(0, -self.menu_wrapper.bottom))
+                self.menu_is_visible = False
+                self.is_menu_toggle_running = False
+        else:
+            self.move_menu(vec(0, move_by))
+            if self.menu_wrapper.top >= 0:
+                if self.menu_wrapper.bottom > 0:
+                    self.move_menu(vec(0, -self.menu_wrapper.top))
+                self.menu_is_visible = True
+                self.is_menu_toggle_running = False
+        
+    def exit(self):
+        pygame.quit()
+        sys.exit()
     
     def update_volume(self, music_sounds=[], vfx_sounds=[]):
         music_volume = self.music_volume_slider.current_value
@@ -154,8 +202,12 @@ class Overworld:
         self.draw_lines()
         self.nodes.draw(self.display_surface)
         self.hat.draw(self.display_surface)
+
+        # Draw the menu
+        pygame.draw.rect(self.display_surface, colors.skyred, self.menu_wrapper, 0, border_bottom_right_radius=90)
+        # pygame.draw.rect(self.display_surface, colors.dark, self.menu_wrapper, 2, border_bottom_right_radius=90)
         self.labels.draw(self.display_surface)
-        for sprite in self.settings.sprites():
+        for sprite in self.controllers.sprites():
             sprite.draw()
 
     def run(self, music_sounds=[], vfx_sounds=[]):
@@ -167,8 +219,12 @@ class Overworld:
         self.hat.update()
         self.nodes.update()
 
+        # toggeling menu
+        if self.is_menu_toggle_running:
+            self.toggle_menu()
+
         # Settings
-        for sprite in self.settings.sprites():
+        for sprite in self.controllers.sprites():
             sprite.update()
 
         self.update_volume(music_sounds, vfx_sounds)

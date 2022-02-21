@@ -60,6 +60,7 @@ class Level:
         self.soundeffects = {
             'collect_coin': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'coin.wav')),
             'stomp': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'stomp.wav')),
+            'collect_skull': pygame.mixer.Sound(os.path.join(BASE_DIR, 'audio', 'effects', 'collect_skull.wav')),
         }
 
     def play_soundeffect(self, soundeffect):
@@ -87,9 +88,12 @@ class Level:
 
         self = caller if caller else self
 
-        self.sky = Sky(horizon=5)
-        self.water = Water(35, self.level_rect.width)
-        self.clouds = Clouds(8, self.level_rect.width, 20)
+        screen_height = SCREEN_HEIGHT // TILE_SIZE
+        horizon = screen_height // 2
+        water_level = screen_height - screen_height // 4
+        self.sky = Sky(horizon=horizon)
+        self.clouds = Clouds(water_level, self.level_rect.width, 30)
+        self.water = Water(water_level)
 
         # Setup UI
         self.health_bar = pygame.sprite.GroupSingle(
@@ -117,6 +121,9 @@ class Level:
 
         coins_layout = import_csv_layout(self.level_data['coins'])
         self.create_sprites_from_layout(coins_layout, 'coins', [self.visible_sprites, self.active_sprites, self.collectible_sprites])
+
+        collectibles_layout = import_csv_layout(self.level_data['collectibles'])
+        self.create_sprites_from_layout(collectibles_layout, 'collectibles', [self.visible_sprites, self.active_sprites, self.collectible_sprites])
 
         spikes_layout = import_csv_layout(self.level_data['spikes'])
         self.create_sprites_from_layout(
@@ -188,13 +195,15 @@ class Level:
                 if cell != -1:
                     x, y = j * TILE_SIZE, i * TILE_SIZE
                     if layout_type == 'water':
-                        WaterTile((x, y), groups)
+                        WaterReflectionTile((x, y), groups)
                     elif layout_type in ['terrain', 'bg_terrain', 'bg_terrain2']:
                         TerrainTile((x, y), groups, cell)
                     elif layout_type == 'grass':
                         GrassTile((x, y), groups, cell)
                     elif layout_type == 'coins':
                         CoinTile((x, y), groups, cell)
+                    elif layout_type == 'collectibles':
+                        CollectibleTile((x, y), groups, cell)
                     elif layout_type in ['fg_palms', 'bg_palms']:
                         PalmTile((x, y), groups, cell)
                     elif layout_type in ['crates']:
@@ -214,6 +223,11 @@ class Level:
         coin_animation = ParticleEffect(pos, [], ParticleEffectType.COLLECT_COIN)
         self.visible_sprites.add(coin_animation)
         self.active_sprites.add(coin_animation)
+
+    def create_skull_collect_animation(self, pos):
+        skull_animation = ParticleEffect(pos, [], ParticleEffectType.COLLECT_SKULL)
+        self.visible_sprites.add(skull_animation)
+        self.active_sprites.add(skull_animation)
 
     def create_jump_animation(self, pos):
         jump_particle_sprite = ParticleEffect(pos, [], ParticleEffectType.JUMP)
@@ -273,7 +287,7 @@ class Level:
     def check_if_player_is_dead(self):
         """Checks if the player is dead."""
         if (
-            self.player.rect.bottom > SCREEN_HEIGHT or
+            self.player.rect.bottom > self.level_rect.bottom + 100 or
             self.player.health_bar.sprite.current_health <= 0
         ):
             self.prepare_to_pause()
@@ -317,6 +331,18 @@ class Level:
                         self.kill_enemy(enemy)
                         self.play_soundeffect('stomp')
     
+    def check_skull_collision(self):
+        if self.player.is_dead:
+            return
+
+        skulls = [sprite for sprite in self.collectible_sprites.sprites() if sprite.__class__ == CollectibleTile and sprite.type == 'golden_skull']
+        for skull in skulls:
+            if self.player.rect.colliderect(skull.rect):
+                self.player.collect_skull()
+                self.play_soundeffect('collect_skull')
+                self.create_skull_collect_animation(skull.rect.center)
+                skull.kill()
+    
     def check_coin_collision(self):
         if self.player.is_dead:
             return
@@ -359,6 +385,7 @@ class Level:
         if not self.is_input_disabled:
             self.check_spike_collision()
             self.check_enemy_collision()
+            self.check_skull_collision()
             self.check_coin_collision()
             self.check_if_completed()
             self.check_if_player_is_dead()

@@ -40,15 +40,14 @@ levels = {
 }
 TILE_SIZE = 64
 SCREEN_WIDTH = 1366
-VERTICAL_ROWS = 11
-SCREEN_HEIGHT = TILE_SIZE * VERTICAL_ROWS
+SCREEN_HEIGHT = 768
 
 # Camera settings
 CAMERA_BORDERS = {
-    'left': 400,
-    'right': 400,
-    'top': 100,
-    'bottom': 200,
+    'left': SCREEN_WIDTH // 3.5,
+    'right': SCREEN_WIDTH // 3.5,
+    'top': SCREEN_HEIGHT // 5,
+    'bottom': SCREEN_HEIGHT // 3,
 }
 
 # Time related settings
