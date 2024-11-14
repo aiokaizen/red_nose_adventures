@@ -164,11 +164,14 @@ def play_example_vfx(volume=0.5):
 
 def import_csv_layout(file_path):
     layout = []
-    with open(file_path) as map:
-        level = reader(map, delimiter=',')
-        for row in level:
-            layout.append(list(row))
-        return layout
+    try:
+        with open(file_path) as map:
+            level = reader(map, delimiter=',')
+            for row in level:
+                layout.append(list(row))
+            return layout
+    except Exception as e:
+        return []
 
 
 def import_cut_graphics(path):
